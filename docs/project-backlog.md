@@ -9,7 +9,7 @@
 | DS-009 | P0 | Contracts | Silent schema/data corruption | Versioned contracts and immutable quarantine | Contract tests | DONE |
 | DS-010 | P1 | Reprocessing | Unrecoverable bad history | Scoped idempotent backfill and reprocessing | Backfill tests | DONE |
 | DS-011 | P1 | Scenarios | Unproven recovery behavior | Reproducible connectivity/HMI demo | Scenario and HMI tests | DONE |
-| DS-012 | P2 | Observability | Silent pipeline failure | Structured local metrics and runbook | Pending | TODO |
+| DS-012 | P2 | Observability | Silent pipeline failure | Structured local metrics and runbook | Processing test | DONE |
 | DS-013 | P2 | Spark | Unmeasured distributed performance | Baseline and optimized Spark workloads | Pending | TODO |
 | DS-005 | P1 | AWS | Unplanned cloud spend | Review Terraform plan with target AWS account | Terraform validate | BLOCKED_EXTERNAL |
 | DS-006 | P1 | Analytics | Unverified cloud integration | Execute Glue and validate Athena/QuickSight datasets | None yet | BLOCKED_EXTERNAL |
