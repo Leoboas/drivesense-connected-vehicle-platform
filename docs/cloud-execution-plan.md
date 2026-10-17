@@ -17,9 +17,9 @@ Default: `us-east-1`, configurable through `aws_region`. The final region must b
 
 ## Initial controlled run
 
-Use a `DEMO_SMALL` profile: 1,000,000 generated events, fixed seed, 100 vehicles and 500 trips. It is the smallest intended cloud profile that should create meaningful partitions, joins and shuffle. Start with one Glue worker of the smallest supported worker type for the configured Glue version; do not run `DEMO_MEDIUM` or benchmark scale until baseline evidence justifies it.
+Use a `DEMO_SMALL` profile: 1,000,000 generated events, fixed seed, 100 vehicles and 500 trips. It is the smallest intended cloud profile that should create meaningful partitions, joins and shuffle. The job is pinned to two `G.1X` workers; do not run `DEMO_MEDIUM` or benchmark scale until baseline evidence justifies it.
 
-Expected runtime and cost cannot be claimed before a regional pricing and first-run measurement. The first run must record Glue DPU seconds, Athena scanned bytes, S3 bytes and CloudWatch usage, then calculate a cost estimate using the price reference date in its manifest.
+Assuming the published us-east-1 Glue reference of $0.44/DPU-hour, two DPUs for 10–30 minutes cost roughly $0.15–$0.44 before crawler, S3 and log charges. Three small Athena benchmark queries scanning no more than 1 GB each are below $0.02 at the published $5/TB reference. Treat $0.20–$0.75 as a planning range, not a quote; the first execution records actual DPU seconds and scanned bytes.
 
 ## Commands
 

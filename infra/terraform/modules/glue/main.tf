@@ -15,8 +15,10 @@ resource "aws_glue_crawler" "bronze" {
 resource "aws_glue_job" "telemetry_etl" {
   name = "${var.name}-telemetry-etl"
   role_arn = var.glue_role_arn
-  glue_version = "4.0"
-  max_retries = 1
+  glue_version       = "4.0"
+  max_retries        = 1
+  worker_type        = "G.1X"
+  number_of_workers  = 2
   command {
     name            = "glueetl"
     script_location = "s3://${var.data_bucket}/artifacts/telemetry_etl.py"
