@@ -8,6 +8,6 @@
 | DS-004 | P0 | Quality | Validation rules and score | DONE |
 | DS-005 | P1 | AWS | Review Terraform plan with target AWS account | BLOCKED_EXTERNAL |
 | DS-006 | P1 | Analytics | Execute Glue and validate Athena/QuickSight datasets | BLOCKED_EXTERNAL |
-| DS-007 | P2 | Routing | Implement deterministic Route Intelligence Score | TODO |
+| DS-007 | P2 | Routing | Implement deterministic Route Intelligence Score | DONE |
 | DS-008 | P2 | Observability | Publish CloudWatch dashboards/alarms after deployment | TODO |
 

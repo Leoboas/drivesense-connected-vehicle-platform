@@ -34,6 +34,8 @@ docker build .
 
 See [architecture](docs/architecture.md), [offline-first design](docs/offline-first.md), [data quality](docs/data-quality.md), [cost model](docs/cost-model.md), and [interview notes](docs/interview-notes.md).
 
+Route alternatives use a transparent [deterministic score](docs/route-intelligence.md) that trades travel time, energy, uphill elevation and expected connectivity; it can trigger a simulated offline-prefetch decision.
+
 ## Infrastructure
 
 Terraform intentionally has no automatic apply. Authenticate using an external AWS profile/SSO, then review the plan:
