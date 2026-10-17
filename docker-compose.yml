@@ -1,0 +1,5 @@
+services:
+  generator:
+    build: .
+    command: ["--vehicles", "3", "--trips", "6", "--events", "100", "--output", "/tmp/telemetry.jsonl"]
+

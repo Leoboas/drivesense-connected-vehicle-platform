@@ -1,0 +1,1 @@
+"""Synthetic vehicle telemetry generation."""
