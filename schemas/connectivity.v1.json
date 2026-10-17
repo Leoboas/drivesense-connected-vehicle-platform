@@ -1,0 +1,1 @@
+{"type":"object","required":["schema_version","event_id","vehicle_id","timestamp","connection_state"],"properties":{"schema_version":{"const":"connectivity.v1"},"connection_state":{"enum":["CONNECTED","DEGRADED","OFFLINE","RECOVERY"]}},"additionalProperties":true}

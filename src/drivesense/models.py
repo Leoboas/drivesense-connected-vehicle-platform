@@ -23,6 +23,7 @@ class TelemetryEvent:
     object_detected: bool = False
     warning_generated_at: str | None = None
     warning_displayed_at: str | None = None
+    schema_version: str = "telemetry.v2"
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DriveSense telemetry event v1",
+  "type": "object",
+  "required": ["schema_version", "event_id", "vehicle_id", "trip_id", "timestamp", "latitude", "longitude", "speed_kph", "battery_soc", "network_type", "signal_dbm", "latency_ms", "connection_state"],
+  "properties": {
+    "schema_version": {"const": "telemetry.v1", "description": "Contract version"},
+    "event_id": {"type": "string", "minLength": 1},
+    "vehicle_id": {"type": "string", "minLength": 1},
+    "trip_id": {"type": "string", "minLength": 1},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "latitude": {"type": "number"},
+    "longitude": {"type": "number"},
+    "speed_kph": {"type": "number"},
+    "battery_soc": {"type": "number"},
+    "network_type": {"enum": ["5G", "LTE", "3G", "OFFLINE"]},
+    "signal_dbm": {"type": "number"},
+    "latency_ms": {"type": "number"},
+    "connection_state": {"enum": ["CONNECTED", "DEGRADED", "OFFLINE", "RECOVERY"]}
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,1 @@
+{"type":"object","required":["schema_version","route_id","segment_id","connectivity_score"],"properties":{"schema_version":{"const":"route.v1"},"connectivity_score":{"type":"number"}},"additionalProperties":true}

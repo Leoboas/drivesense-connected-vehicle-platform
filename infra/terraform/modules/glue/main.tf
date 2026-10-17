@@ -22,7 +22,13 @@ resource "aws_glue_job" "telemetry_etl" {
     script_location = "s3://${var.data_bucket}/artifacts/telemetry_etl.py"
     python_version  = "3"
   }
-  default_arguments = { "--job-language" = "python", "--enable-metrics" = "true", "--enable-continuous-cloudwatch-log" = "true" }
+  default_arguments = {
+    "--job-language"                      = "python"
+    "--enable-metrics"                     = "true"
+    "--enable-continuous-cloudwatch-log"   = "true"
+    "--enable-spark-ui"                    = "true"
+    "--spark-event-logs-path"              = "s3://${var.data_bucket}/spark-event-logs/"
+  }
   tags = var.tags
 }
 output "database_name" { value = aws_glue_catalog_database.this.name }
