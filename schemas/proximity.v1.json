@@ -1,0 +1,1 @@
+{"type":"object","required":["schema_version","event_id","vehicle_id","timestamp","object_detected"],"properties":{"schema_version":{"const":"proximity.v1"},"object_detected":{"type":"boolean"}},"additionalProperties":true}
