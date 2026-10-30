@@ -12,7 +12,12 @@
     "connection_state": {"enum": ["CONNECTED", "DEGRADED", "OFFLINE", "RECOVERY"]},
     "battery_temperature_c": {"type": ["number", "null"], "description": "Optional battery temperature"},
     "sensor_firmware_version": {"type": ["string", "null"]}, "network_provider": {"type": ["string", "null"]},
-    "gps_accuracy_m": {"type": ["number", "null"]}
+    "gps_accuracy_m": {"type": ["number", "null"]},
+    "scenario": {"type": "string"}, "route_id": {"type": "string"},
+    "route_segment": {"type": "string"}, "region_type": {"enum": ["URBAN", "HIGHWAY", "TRAIL"]},
+    "offline_duration_s": {"type": "integer", "minimum": 0},
+    "reconnection_count": {"type": "integer", "minimum": 0},
+    "sync_duration_ms": {"type": "integer", "minimum": 0}
   },
   "additionalProperties": true
 }

@@ -24,6 +24,13 @@ class TelemetryEvent:
     warning_generated_at: str | None = None
     warning_displayed_at: str | None = None
     schema_version: str = "telemetry.v2"
+    scenario: str = "SAO_PAULO_URBAN"
+    route_id: str = "sp-urban"
+    route_segment: str = "SAO_PAULO_METRO"
+    region_type: str = "URBAN"
+    offline_duration_s: int = 0
+    reconnection_count: int = 0
+    sync_duration_ms: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
