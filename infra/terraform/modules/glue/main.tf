@@ -178,6 +178,40 @@ resource "aws_glue_catalog_table" "telemetry_silver" {
       name = "sync_duration_ms"
       type = "int"
     }
+    dynamic "columns" {
+      for_each = {
+        packet_loss_pct        = "double"
+        network_provider       = "string"
+        bytes_buffered         = "bigint"
+        road_class             = "string"
+        distance_remaining_km  = "double"
+        eta_minutes            = "double"
+        reroute_count          = "int"
+        map_match_confidence   = "double"
+        screen_id              = "string"
+        interaction_type       = "string"
+        warning_level          = "string"
+        driver_action          = "string"
+        driver_response_time_ms = "int"
+        battery_temperature_c  = "double"
+        energy_consumption_kwh = "double"
+        range_estimate_km      = "double"
+        tire_pressure_status   = "string"
+        vehicle_state          = "string"
+        ingested_at            = "string"
+        late_arrival_seconds   = "int"
+        retry_count            = "int"
+        processing_latency_ms  = "int"
+        weather_condition      = "string"
+        road_surface           = "string"
+        traffic_level          = "string"
+        visibility_level       = "string"
+      }
+      content {
+        name = columns.key
+        type = columns.value
+      }
+    }
   }
   depends_on = [aws_glue_job.telemetry_etl]
 }

@@ -93,6 +93,10 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
         b.metric("Vehicles", f"{vehicle_count:,}")
         c.metric("Trips", f"{trip_count:,}")
         d.metric("Average speed", f"{data['speed_kph'].mean():.1f} km/h")
+        e, f, g = st.columns(3)
+        e.metric("Average energy", f"{data['energy_consumption_kwh'].mean():.3f} kWh/event")
+        f.metric("Estimated range", f"{data['range_estimate_km'].mean():.0f} km")
+        g.metric("Low tire-pressure events", f"{(data['tire_pressure_status'] == 'LOW').sum():,}")
         st.subheader("Synthetic vehicle locations by declared road and trail corridors")
         st.caption(
             "São Paulo–Florianópolis follows declared BR-116/BR-101 waypoints and the island "
@@ -107,11 +111,16 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
         st.bar_chart(data["scenario"].value_counts(), y_label="Events")
 
     with connectivity:
-        a, b, c = st.columns(3)
+        a, b, c, d = st.columns(4)
         a.metric("Average latency", f"{data['latency_ms'].mean():.1f} ms")
         offline = int((data["connection_state"] == "OFFLINE").sum())
         b.metric("Offline events", f"{offline:,}")
         c.metric("Average signal", f"{data['signal_dbm'].mean():.1f} dBm")
+        d.metric("Packet loss", f"{data['packet_loss_pct'].mean():.1f}%")
+        e, f, g = st.columns(3)
+        e.metric("Buffered data", f"{data['bytes_buffered'].sum() / 1_000_000:.2f} MB")
+        f.metric("Average sync time", f"{data['sync_duration_ms'].mean():.0f} ms")
+        g.metric("Reconnections", f"{data['reconnection_count'].sum():,}")
         st.subheader("Average latency over time")
         daily = (
             data.assign(event_date=data["event_timestamp"].dt.date)
@@ -141,6 +150,14 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
             warning_events["warning_latency_ms"].round(-1).value_counts().sort_index()
         )
         st.bar_chart(latency_distribution, y_label="Warnings")
+        st.subheader("Multimedia and driver interaction context")
+        st.dataframe(
+            data.groupby(["screen_id", "interaction_type", "warning_level"])
+            .size()
+            .reset_index(name="events")
+            .sort_values("events", ascending=False),
+            hide_index=True,
+        )
 
     with quality:
         a, b = st.columns(2)
@@ -152,6 +169,15 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
             .value_counts()
             .rename_axis("rule")
             .reset_index(name="records"),
+            hide_index=True,
+        )
+        st.subheader("DataOps processing health")
+        st.dataframe(
+            data.groupby("scenario")[
+                ["late_arrival_seconds", "retry_count", "processing_latency_ms"]
+            ]
+            .mean()
+            .reset_index(),
             hide_index=True,
         )
 
@@ -176,6 +202,14 @@ recommendation."""
             .sort_values("non_connected_rate", ascending=False)
         )
         st.dataframe(route_risk, hide_index=True)
+        st.subheader("Route context")
+        st.dataframe(
+            data.groupby(["road_class", "weather_condition", "road_surface", "traffic_level"])
+            .size()
+            .reset_index(name="events")
+            .sort_values("events", ascending=False),
+            hide_index=True,
+        )
         st.info(
             "When predicted offline probability exceeds 40%, the simulated platform requests "
             "offline prefetch."

@@ -31,6 +31,32 @@ class TelemetryEvent:
     offline_duration_s: int = 0
     reconnection_count: int = 0
     sync_duration_ms: int = 0
+    packet_loss_pct: float = 0.0
+    network_provider: str = "SYNTHETIC_PROVIDER_A"
+    bytes_buffered: int = 0
+    road_class: str = "URBAN_ARTERIAL"
+    distance_remaining_km: float = 0.0
+    eta_minutes: float = 0.0
+    reroute_count: int = 0
+    map_match_confidence: float = 1.0
+    screen_id: str = "NAVIGATION"
+    interaction_type: str = "NONE"
+    warning_level: str = "NONE"
+    driver_action: str = "NONE"
+    driver_response_time_ms: int | None = None
+    battery_temperature_c: float = 25.0
+    energy_consumption_kwh: float = 0.0
+    range_estimate_km: float = 0.0
+    tire_pressure_status: str = "NORMAL"
+    vehicle_state: str = "DRIVING"
+    ingested_at: str = ""
+    late_arrival_seconds: int = 0
+    retry_count: int = 0
+    processing_latency_ms: int = 0
+    weather_condition: str = "CLEAR"
+    road_surface: str = "DRY"
+    traffic_level: str = "MODERATE"
+    visibility_level: str = "GOOD"
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

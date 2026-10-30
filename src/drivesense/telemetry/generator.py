@@ -63,6 +63,12 @@ def road_segment(progress: float) -> str:
     )
 
 
+def road_class_for(region_type: str) -> str:
+    return {"URBAN": "URBAN_ARTERIAL", "HIGHWAY": "FEDERAL_HIGHWAY", "TRAIL": "UNPAVED_TRAIL"}[
+        region_type
+    ]
+
+
 def geography_context(index: int, rng: random.Random) -> GeographyContext:
     """Return a synthetic Brazilian geography scenario for an event.
 
@@ -167,11 +173,27 @@ def generate_events(config: GeneratorConfig) -> list[TelemetryEvent]:
                 displayed_time = (
                     base + timedelta(seconds=index, milliseconds=rng.randint(80, 600))
                 ).isoformat()
+        offline_duration = rng.randint(60, 900) if state == "OFFLINE" else 0
+        reconnections = rng.randint(1, 5) if state in {"OFFLINE", "DEGRADED"} else 0
+        sync_duration = rng.randint(500, 6000) if state == "OFFLINE" else 0
+        packet_loss = (
+            rng.uniform(15, 45)
+            if state == "OFFLINE"
+            else rng.uniform(3, 15)
+            if state == "DEGRADED"
+            else rng.uniform(0, 2)
+        )
+        buffered_bytes = rng.randint(100_000, 2_000_000) if state == "OFFLINE" else 0
+        distance_remaining = round(max(0, 420 * (1 - ((index // 4) % 500) / 499)), 2)
+        event_time = base + timedelta(seconds=index)
+        warning_level = (
+            "CRITICAL" if detected and rng.random() < 0.15 else "WARNING" if detected else "NONE"
+        )
         event = TelemetryEvent(
             event_id=str(uuid.uuid4()),
             vehicle_id=vehicle_id,
             trip_id=trip_id,
-            timestamp=(base + timedelta(seconds=index)).isoformat(),
+            timestamp=event_time.isoformat(),
             latitude=round(geography.latitude, 6),
             longitude=round(geography.longitude, 6),
             speed_kph=speed,
@@ -188,9 +210,44 @@ def generate_events(config: GeneratorConfig) -> list[TelemetryEvent]:
             route_id=geography.route_id,
             route_segment=geography.route_segment,
             region_type=geography.region_type,
-            offline_duration_s=rng.randint(60, 900) if state == "OFFLINE" else 0,
-            reconnection_count=rng.randint(1, 5) if state in {"OFFLINE", "DEGRADED"} else 0,
-            sync_duration_ms=rng.randint(500, 6000) if state == "OFFLINE" else 0,
+            offline_duration_s=offline_duration,
+            reconnection_count=reconnections,
+            sync_duration_ms=sync_duration,
+            packet_loss_pct=round(packet_loss, 2),
+            network_provider=rng.choice(["SYNTHETIC_PROVIDER_A", "SYNTHETIC_PROVIDER_B"]),
+            bytes_buffered=buffered_bytes,
+            road_class=road_class_for(geography.region_type),
+            distance_remaining_km=distance_remaining,
+            eta_minutes=round(distance_remaining / max(speed, 5) * 60, 1),
+            reroute_count=rng.randint(0, 2) if state != "CONNECTED" else 0,
+            map_match_confidence=round(
+                rng.uniform(0.65, 0.9) if geography.region_type == "TRAIL" else rng.uniform(0.9, 1),
+                2,
+            ),
+            screen_id=rng.choice(["NAVIGATION", "MEDIA", "VEHICLE_STATUS"]),
+            interaction_type=rng.choice(["NONE", "TAP", "VOICE", "STEERING_WHEEL"]),
+            warning_level=warning_level,
+            driver_action="BRAKE"
+            if warning_level == "CRITICAL"
+            else "ACKNOWLEDGE"
+            if detected
+            else "NONE",
+            driver_response_time_ms=rng.randint(300, 2500) if detected else None,
+            battery_temperature_c=round(rng.uniform(18, 42), 1),
+            energy_consumption_kwh=round(
+                rng.uniform(0.05, 0.35) * (1.3 if geography.region_type == "HIGHWAY" else 1), 3
+            ),
+            range_estimate_km=round(battery * 3.8, 1),
+            tire_pressure_status="LOW" if rng.random() < 0.02 else "NORMAL",
+            vehicle_state="PARKED" if speed < 2 else "DRIVING",
+            ingested_at=(event_time + timedelta(seconds=offline_duration)).isoformat(),
+            late_arrival_seconds=offline_duration,
+            retry_count=reconnections,
+            processing_latency_ms=rng.randint(40, 500) + sync_duration,
+            weather_condition=rng.choice(["CLEAR", "RAIN", "FOG"]),
+            road_surface="WET" if rng.random() < 0.2 else "DRY",
+            traffic_level=rng.choice(["LOW", "MODERATE", "HIGH"]),
+            visibility_level="LOW" if rng.random() < 0.1 else "GOOD",
         )
         output.append(event)
         if rng.random() < config.duplicate_probability:

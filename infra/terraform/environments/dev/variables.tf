@@ -5,7 +5,7 @@ variable "aws_region" {
 variable "silver_prefix" {
   type        = string
   description = "S3 prefix containing the partitioned Silver Parquet dataset to catalogue."
-  default     = "silver/cloud-demo-20261030-001/"
+  default     = "silver/cloud-multimedia-20261030-001/"
 }
 variable "environment" {
   type    = string
