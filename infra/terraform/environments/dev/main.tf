@@ -28,6 +28,7 @@ module "glue" {
   data_bucket   = module.s3.data_bucket_id
   silver_prefix = var.silver_prefix
   glue_role_arn = module.iam.glue_role_arn
+  script_path   = "${path.root}/../../../../glue/telemetry_etl.py"
   tags          = var.tags
 }
 module "athena" {

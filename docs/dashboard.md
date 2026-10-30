@@ -20,4 +20,4 @@ The dashboard contains Vehicle Overview, Connectivity, HMI/Proximity, Data Quali
 
 ## Streamlit Community Cloud
 
-Use the GitHub repository `Leoboas/drivesense-connected-vehicle-platform`, branch `develop`, and main file `app/dashboard.py`. The public application uses only the versioned synthetic sample; it does not receive AWS credentials or access the project S3 buckets.
+Use the GitHub repository `Leoboas/drivesense-connected-vehicle-platform`, branch `main`, and main file `app/dashboard.py`. The public application uses only the versioned synthetic sample; it does not receive AWS credentials or access the project S3 buckets. Publish only after the reviewed `develop` to `main` release PR has merged, so the public source and public dashboard stay aligned.
