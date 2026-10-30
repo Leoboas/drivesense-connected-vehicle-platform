@@ -16,4 +16,5 @@
 | DS-006 | P1 | Analytics | Unverified cloud integration | Execute Glue and validate Athena/QuickSight datasets | Glue run evidence; Athena/QuickSight pending | IN_PROGRESS |
 | DS-015 | P1 | Gold analytics | Unqueryable Silver output | Apply Silver catalog table and run Gold Athena queries | Terraform apply and Athena execution evidence | DONE |
 | DS-016 | P2 | Portfolio UI | Data platform difficult to demonstrate | Local Streamlit dashboard across five analytical views | Dashboard documentation and screenshots | IN_PROGRESS |
+| DS-017 | P1 | Multimedia analytics | Missing connected-vehicle experience context | Publish enriched demo data through S3, Glue and Athena | Glue/Athena multimedia run evidence | DONE |
 
