@@ -18,6 +18,20 @@
     "offline_duration_s": {"type": "integer", "minimum": 0},
     "reconnection_count": {"type": "integer", "minimum": 0},
     "sync_duration_ms": {"type": "integer", "minimum": 0}
+    ,"packet_loss_pct": {"type": "number", "minimum": 0, "maximum": 100},
+    "network_provider": {"type": "string"}, "bytes_buffered": {"type": "integer", "minimum": 0},
+    "road_class": {"type": "string"}, "distance_remaining_km": {"type": "number", "minimum": 0},
+    "eta_minutes": {"type": "number", "minimum": 0}, "reroute_count": {"type": "integer", "minimum": 0},
+    "map_match_confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "screen_id": {"type": "string"}, "interaction_type": {"type": "string"},
+    "warning_level": {"type": "string"}, "driver_action": {"type": "string"},
+    "driver_response_time_ms": {"type": ["integer", "null"], "minimum": 0},
+    "energy_consumption_kwh": {"type": "number", "minimum": 0}, "range_estimate_km": {"type": "number", "minimum": 0},
+    "tire_pressure_status": {"type": "string"}, "vehicle_state": {"type": "string"},
+    "ingested_at": {"type": "string", "format": "date-time"}, "late_arrival_seconds": {"type": "integer", "minimum": 0},
+    "retry_count": {"type": "integer", "minimum": 0}, "processing_latency_ms": {"type": "integer", "minimum": 0},
+    "weather_condition": {"type": "string"}, "road_surface": {"type": "string"},
+    "traffic_level": {"type": "string"}, "visibility_level": {"type": "string"}
   },
   "additionalProperties": true
 }
