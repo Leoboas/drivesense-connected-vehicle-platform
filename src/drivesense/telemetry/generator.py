@@ -19,6 +19,50 @@ class GeographyContext:
     connection_state: str
 
 
+SAO_PAULO_FLORIANOPOLIS_ROAD = (
+    (-23.5505, -46.6333),  # São Paulo
+    (-23.8090, -46.4050),  # acesso BR-116 / Baixada Santista
+    (-24.4870, -47.8440),  # Registro
+    (-25.4290, -49.2710),  # Curitiba
+    (-26.3040, -48.8460),  # Joinville
+    (-26.9100, -48.6700),  # Itajaí / BR-101
+    (-27.5950, -48.5950),  # Florianópolis continental
+    (-27.5954, -48.5480),  # acesso pela ponte, Florianópolis
+)
+
+FLORIANOPOLIS_LAND_TRAILS = {
+    "LAGOA_DO_PERI": ((-27.7270, -48.5120), (-27.7380, -48.4980), (-27.7500, -48.5050)),
+    "COSTAO_DA_LAGOA": ((-27.5900, -48.4610), (-27.6070, -48.4510), (-27.6230, -48.4580)),
+    "MORRO_DA_LAGOA": ((-27.6030, -48.4820), (-27.6150, -48.4740), (-27.6290, -48.4810)),
+}
+
+
+def point_on_path(points: tuple[tuple[float, float], ...], progress: float) -> tuple[float, float]:
+    """Interpolate a synthetic point on a declared road or trail corridor."""
+    position = min(int(progress * (len(points) - 1)), len(points) - 2)
+    segment_progress = progress * (len(points) - 1) - position
+    start_latitude, start_longitude = points[position]
+    end_latitude, end_longitude = points[position + 1]
+    return (
+        start_latitude + (end_latitude - start_latitude) * segment_progress,
+        start_longitude + (end_longitude - start_longitude) * segment_progress,
+    )
+
+
+def road_segment(progress: float) -> str:
+    return (
+        "BR_116_SAO_PAULO_REGISTRO"
+        if progress < 0.28
+        else "BR_116_REGISTRO_CURITIBA"
+        if progress < 0.48
+        else "BR_101_CURITIBA_JOINVILLE"
+        if progress < 0.68
+        else "BR_101_JOINVILLE_ITAJAI"
+        if progress < 0.88
+        else "BR_101_FLORIANOPOLIS_ACCESS"
+    )
+
+
 def geography_context(index: int, rng: random.Random) -> GeographyContext:
     """Return a synthetic Brazilian geography scenario for an event.
 
@@ -36,27 +80,29 @@ def geography_context(index: int, rng: random.Random) -> GeographyContext:
             -46.63 + rng.uniform(-0.055, 0.055),
             "CONNECTED",
         )
-    latitude = -23.55 + (-27.59 + 23.55) * progress
-    longitude = -46.63 + (-48.55 + 46.63) * progress
+    latitude, longitude = point_on_path(SAO_PAULO_FLORIANOPOLIS_ROAD, progress)
     if scenario_index == 1:
         return GeographyContext(
             "SAO_PAULO_FLORIANOPOLIS_CORRIDOR",
             "sp-florianopolis",
-            rng.choice(["SAO_PAULO_EXIT", "CURITIBA", "JOINVILLE", "FLORIANOPOLIS_ENTRY"]),
+            road_segment(progress),
             "HIGHWAY",
-            latitude + rng.uniform(-0.025, 0.025),
-            longitude + rng.uniform(-0.025, 0.025),
+            latitude + rng.uniform(-0.003, 0.003),
+            longitude + rng.uniform(-0.003, 0.003),
             "DEGRADED" if rng.random() < 0.25 else "CONNECTED",
         )
     if scenario_index == 2:
         trail = rng.choice(["LAGOA_DO_PERI", "COSTAO_DA_LAGOA", "MORRO_DA_LAGOA"])
+        trail_latitude, trail_longitude = point_on_path(
+            FLORIANOPOLIS_LAND_TRAILS[trail], ((index // 4) % 100) / 99
+        )
         return GeographyContext(
             "FLORIANOPOLIS_TRAILS",
             "florianopolis-trails",
             trail,
             "TRAIL",
-            -27.62 + rng.uniform(-0.08, 0.08),
-            -48.50 + rng.uniform(-0.08, 0.08),
+            trail_latitude + rng.uniform(-0.001, 0.001),
+            trail_longitude + rng.uniform(-0.001, 0.001),
             rng.choices(["CONNECTED", "DEGRADED", "OFFLINE"], weights=[35, 45, 20])[0],
         )
     variation_state = "CONNECTED" if progress < 0.20 or 0.55 <= progress < 0.75 else "DEGRADED"
@@ -65,10 +111,10 @@ def geography_context(index: int, rng: random.Random) -> GeographyContext:
     return GeographyContext(
         "SP_FLORIANOPOLIS_CONNECTIVITY_VARIATION",
         "sp-florianopolis",
-        "SERRA_DO_MAR" if progress < 0.48 else "VALE_DO_ITAJAI",
+        road_segment(progress),
         "HIGHWAY",
-        latitude + rng.uniform(-0.018, 0.018),
-        longitude + rng.uniform(-0.018, 0.018),
+        latitude + rng.uniform(-0.003, 0.003),
+        longitude + rng.uniform(-0.003, 0.003),
         variation_state,
     )
 

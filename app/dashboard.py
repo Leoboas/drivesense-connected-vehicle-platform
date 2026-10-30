@@ -93,15 +93,17 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
         b.metric("Vehicles", f"{vehicle_count:,}")
         c.metric("Trips", f"{trip_count:,}")
         d.metric("Average speed", f"{data['speed_kph'].mean():.1f} km/h")
+        st.subheader("Synthetic vehicle locations by declared road and trail corridors")
         st.caption(
-            "Synthetic route envelopes: São Paulo, São Paulo–Florianópolis and "
-            "trails in Florianópolis."
+            "São Paulo–Florianópolis follows declared BR-116/BR-101 waypoints and the island "
+            "bridge access; it is not a routing engine or real GPS trace."
         )
         st.map(
             data[["latitude", "longitude"]]
             .dropna()
             .rename(columns={"latitude": "lat", "longitude": "lon"})
         )
+        st.subheader("Event volume by geographic scenario")
         st.bar_chart(data["scenario"].value_counts(), y_label="Events")
 
     with connectivity:
@@ -110,6 +112,7 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
         offline = int((data["connection_state"] == "OFFLINE").sum())
         b.metric("Offline events", f"{offline:,}")
         c.metric("Average signal", f"{data['signal_dbm'].mean():.1f} dBm")
+        st.subheader("Average latency over time")
         daily = (
             data.assign(event_date=data["event_timestamp"].dt.date)
             .groupby("event_date")["latency_ms"]
@@ -117,6 +120,7 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
         )
         st.line_chart(daily, y_label="Average latency (ms)")
         stability = data.groupby("route_segment")["latency_ms"].mean().sort_values(ascending=False)
+        st.subheader("Average latency by road or trail segment")
         st.bar_chart(stability, y_label="Average latency (ms)")
 
     with hmi:
@@ -132,6 +136,7 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
             (data["object_detected"]) & data["warning_displayed_at"].isna()
         ).mean()
         c.metric("Missing warning rate", f"{missing_warning_rate:.2%}")
+        st.subheader("Warning-latency distribution")
         latency_distribution = (
             warning_events["warning_latency_ms"].round(-1).value_counts().sort_index()
         )
@@ -141,6 +146,7 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
         a, b = st.columns(2)
         a.metric("Invalid events", f"{invalid_count:,}")
         a.metric("Data quality score", f"{(1 - invalid_count / max(total_events, 1)):.2%}")
+        b.subheader("Records by data-quality rule")
         b.dataframe(
             data["data_quality_flag"]
             .value_counts()
@@ -157,6 +163,7 @@ recommendation."""
         )
         offline_probability = 1 - (data["connection_state"] == "CONNECTED").mean()
         st.metric("Observed non-connected event rate", f"{offline_probability:.2%}")
+        st.subheader("Route and connectivity risk by segment")
         route_risk = (
             data.assign(non_connected=data["connection_state"] != "CONNECTED")
             .groupby(["scenario", "route_segment"])
