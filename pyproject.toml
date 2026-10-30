@@ -12,6 +12,7 @@ dependencies = []
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "ruff>=0.6", "mypy>=1.10"]
 cloud = ["boto3>=1.34,<2"]
+ui = ["duckdb>=1.1,<2", "streamlit>=1.39,<2"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

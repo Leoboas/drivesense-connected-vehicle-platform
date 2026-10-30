@@ -12,6 +12,8 @@
 | DS-012 | P2 | Observability | Silent pipeline failure | Structured local metrics and runbook | Processing test | DONE |
 | DS-013 | P2 | Spark | Unmeasured distributed performance | Baseline and optimized Spark workloads | Pending | TODO |
 | DS-014 | P1 | Security/FinOps | Data exposure or idle artefact cost | Encrypt outputs, lifecycle temporary query results, enable Spark evidence | Terraform validate | DONE |
-| DS-005 | P1 | AWS | Unplanned cloud spend | Review Terraform plan with target AWS account | Terraform validate | BLOCKED_EXTERNAL |
-| DS-006 | P1 | Analytics | Unverified cloud integration | Execute Glue and validate Athena/QuickSight datasets | None yet | BLOCKED_EXTERNAL |
+| DS-005 | P1 | AWS | Unplanned cloud spend | Review Terraform plan with target AWS project | Approved plan and applied resources | DONE |
+| DS-006 | P1 | Analytics | Unverified cloud integration | Execute Glue and validate Athena/QuickSight datasets | Glue run evidence; Athena/QuickSight pending | IN_PROGRESS |
+| DS-015 | P1 | Gold analytics | Unqueryable Silver output | Apply Silver catalog table and run Gold Athena queries | Terraform apply and Athena execution evidence | DONE |
+| DS-016 | P2 | Portfolio UI | Data platform difficult to demonstrate | Local Streamlit dashboard across five analytical views | Dashboard documentation and screenshots | IN_PROGRESS |
 

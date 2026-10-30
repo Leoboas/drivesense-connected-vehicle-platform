@@ -2,7 +2,7 @@
 
 ## Region
 
-Default: `us-east-1`, configurable through `aws_region`. The final region must be recorded in the run manifest.
+Project selected Region: `us-east-2`, passed explicitly through `aws_region`. The final region must be recorded in the run manifest. Do not create project Regional resources in another Region.
 
 ## Resources and cost model
 
@@ -19,15 +19,15 @@ Default: `us-east-1`, configurable through `aws_region`. The final region must b
 
 Use a `DEMO_SMALL` profile: 1,000,000 generated events, fixed seed, 100 vehicles and 500 trips. It is the smallest intended cloud profile that should create meaningful partitions, joins and shuffle. The job is pinned to two `G.1X` workers; do not run `DEMO_MEDIUM` or benchmark scale until baseline evidence justifies it.
 
-Assuming the published us-east-1 Glue reference of $0.44/DPU-hour, two DPUs for 10–30 minutes cost roughly $0.15–$0.44 before crawler, S3 and log charges. Three small Athena benchmark queries scanning no more than 1 GB each are below $0.02 at the published $5/TB reference. Treat $0.20–$0.75 as a planning range, not a quote; the first execution records actual DPU seconds and scanned bytes.
+Use the current `us-east-2` pricing when making any estimate. Treat all planning ranges as non-binding: the first execution must record actual DPU seconds and query bytes scanned, and AWS Billing data can take time to appear.
 
 ## Commands
 
 ```bash
 terraform -chdir=infra/terraform/environments/dev fmt -check -recursive
 terraform -chdir=infra/terraform/environments/dev validate
-python scripts/aws_preflight.py --region us-east-1
-terraform -chdir=infra/terraform/environments/dev plan -out=tfplan
+python scripts/aws_preflight.py --region us-east-2
+terraform -chdir=infra/terraform/environments/dev plan -var="aws_region=us-east-2" -out=tfplan
 terraform show -no-color tfplan > docs/evidence/terraform-plan.txt
 # After explicit approval only:
 # terraform -chdir=infra/terraform/environments/dev apply tfplan

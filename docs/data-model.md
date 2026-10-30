@@ -6,5 +6,5 @@
 
 ## Analytical models
 
-`vehicle_trip_summary`, `connectivity_summary`, `hmi_warning_performance`, `sensor_quality`, and `offline_sync_summary` are derived from Silver. They are logical Athena/QuickSight models, not sources of truth.
+`vehicle_trip_summary`, `connectivity_summary`, `hmi_warning_performance`, `sensor_quality`, and `offline_sync_summary` are derived from Silver. They are logical Athena/QuickSight models, not sources of truth. The initial deployed catalogue table is `drivesense_dev_catalog.telemetry_silver`, scoped to the recorded controlled run; broader run aggregation needs an explicit data-layout evolution.
 
