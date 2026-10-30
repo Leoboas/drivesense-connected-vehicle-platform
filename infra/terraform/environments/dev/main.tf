@@ -26,6 +26,7 @@ module "glue" {
   source        = "../../modules/glue"
   name          = local.name
   data_bucket   = module.s3.data_bucket_id
+  silver_prefix = var.silver_prefix
   glue_role_arn = module.iam.glue_role_arn
   tags          = var.tags
 }
@@ -33,6 +34,7 @@ module "athena" {
   source         = "../../modules/athena"
   name           = local.name
   results_bucket = module.s3.results_bucket_id
+  database_name  = module.glue.database_name
   tags           = var.tags
 }
 

@@ -34,6 +34,10 @@ docker build .
 
 See [architecture](docs/architecture.md), [offline-first design](docs/offline-first.md), [data quality](docs/data-quality.md), [cost model](docs/cost-model.md), and [interview notes](docs/interview-notes.md).
 
+For a local, visual presentation layer, see the [Streamlit dashboard](docs/dashboard.md). It reads synthetic JSONL or downloaded Silver Parquet and does not create a continuously running AWS service.
+
+The public Streamlit deployment intentionally uses a small committed synthetic sample and has no AWS credentials or direct S3 access.
+
 Route alternatives use a transparent [deterministic score](docs/route-intelligence.md) that trades travel time, energy, uphill elevation and expected connectivity; it can trigger a simulated offline-prefetch decision.
 
 ## Infrastructure
