@@ -29,7 +29,7 @@ def relation_for(path: str) -> str:
 def load_rows(path: str):  # type: ignore[no-untyped-def]
     connection = duckdb.connect()
     source = relation_for(path)
-    return connection.sql(
+    rows = connection.sql(
         f"""
         SELECT *,
           try_cast(timestamp AS TIMESTAMP) AS event_timestamp,
@@ -47,9 +47,31 @@ def load_rows(path: str):  # type: ignore[no-untyped-def]
         FROM {source}
         """
     ).df()
+    defaults = {
+        "scenario": "LEGACY_SAO_PAULO",
+        "route_id": "legacy-sp-urban",
+        "route_segment": "SAO_PAULO_METRO",
+        "region_type": "URBAN",
+        "offline_duration_s": 0,
+        "reconnection_count": 0,
+        "sync_duration_ms": 0,
+    }
+    for column, default in defaults.items():
+        if column not in rows:
+            rows[column] = default
+    return rows
 
 
 def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
+    selected_scenarios = st.sidebar.multiselect(
+        "Geographic scenarios",
+        options=sorted(data["scenario"].unique()),
+        default=sorted(data["scenario"].unique()),
+    )
+    data = data[data["scenario"].isin(selected_scenarios)]
+    if data.empty:
+        st.info("Select at least one geographic scenario.")
+        return
     total_events = len(data)
     vehicle_count = data["vehicle_id"].nunique()
     trip_count = data["trip_id"].nunique()
@@ -71,11 +93,16 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
         b.metric("Vehicles", f"{vehicle_count:,}")
         c.metric("Trips", f"{trip_count:,}")
         d.metric("Average speed", f"{data['speed_kph'].mean():.1f} km/h")
+        st.caption(
+            "Synthetic route envelopes: São Paulo, São Paulo–Florianópolis and "
+            "trails in Florianópolis."
+        )
         st.map(
             data[["latitude", "longitude"]]
             .dropna()
             .rename(columns={"latitude": "lat", "longitude": "lon"})
         )
+        st.bar_chart(data["scenario"].value_counts(), y_label="Events")
 
     with connectivity:
         a, b, c = st.columns(3)
@@ -89,6 +116,8 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
             .mean()
         )
         st.line_chart(daily, y_label="Average latency (ms)")
+        stability = data.groupby("route_segment")["latency_ms"].mean().sort_values(ascending=False)
+        st.bar_chart(stability, y_label="Average latency (ms)")
 
     with hmi:
         warning_events = data.dropna(subset=["warning_latency_ms"])
@@ -128,6 +157,18 @@ recommendation."""
         )
         offline_probability = 1 - (data["connection_state"] == "CONNECTED").mean()
         st.metric("Observed non-connected event rate", f"{offline_probability:.2%}")
+        route_risk = (
+            data.assign(non_connected=data["connection_state"] != "CONNECTED")
+            .groupby(["scenario", "route_segment"])
+            .agg(
+                non_connected_rate=("non_connected", "mean"),
+                offline_duration_s=("offline_duration_s", "mean"),
+                reconnections=("reconnection_count", "mean"),
+            )
+            .reset_index()
+            .sort_values("non_connected_rate", ascending=False)
+        )
+        st.dataframe(route_risk, hide_index=True)
         st.info(
             "When predicted offline probability exceeds 40%, the simulated platform requests "
             "offline prefetch."

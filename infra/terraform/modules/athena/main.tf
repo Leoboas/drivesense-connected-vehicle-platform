@@ -25,11 +25,13 @@ locals {
       GROUP BY 1, 2, 3
     SQL
     connectivity_summary = <<-SQL
-      SELECT event_date, network_type, count(*) AS events, avg(latency_ms) AS avg_latency_ms,
+      SELECT event_date, scenario, route_segment, network_type, count(*) AS events, avg(latency_ms) AS avg_latency_ms,
         approx_percentile(latency_ms, 0.95) AS p95_latency_ms,
-        avg(connection_stability_score) AS avg_connection_stability_score
+        avg(connection_stability_score) AS avg_connection_stability_score,
+        avg(offline_duration_s) AS avg_offline_duration_s,
+        avg(reconnection_count) AS avg_reconnection_count
       FROM ${var.database_name}.telemetry_silver
-      GROUP BY 1, 2
+      GROUP BY 1, 2, 3, 4
     SQL
     hmi_warning_performance = <<-SQL
       SELECT event_date, approx_percentile(warning_latency_ms, 0.50) AS p50_warning_latency_ms,

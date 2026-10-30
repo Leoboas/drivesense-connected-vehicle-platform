@@ -150,6 +150,34 @@ resource "aws_glue_catalog_table" "telemetry_silver" {
       name = "connection_stability_score"
       type = "int"
     }
+    columns {
+      name = "scenario"
+      type = "string"
+    }
+    columns {
+      name = "route_id"
+      type = "string"
+    }
+    columns {
+      name = "route_segment"
+      type = "string"
+    }
+    columns {
+      name = "region_type"
+      type = "string"
+    }
+    columns {
+      name = "offline_duration_s"
+      type = "int"
+    }
+    columns {
+      name = "reconnection_count"
+      type = "int"
+    }
+    columns {
+      name = "sync_duration_ms"
+      type = "int"
+    }
   }
   depends_on = [aws_glue_job.telemetry_etl]
 }

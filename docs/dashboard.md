@@ -16,7 +16,7 @@ $env:DRIVESENSE_DASHBOARD_DATA = "data/silver/*.parquet"
 streamlit run app/dashboard.py
 ```
 
-The dashboard contains Vehicle Overview, Connectivity, HMI/Proximity, Data Quality and Route Intelligence tabs. It is an interview presentation layer, not an operational control plane or a real-time vehicle application.
+The dashboard contains Vehicle Overview, Connectivity, HMI/Proximity, Data Quality and Route Intelligence tabs. Its versioned sample contains four synthetic geographic scenarios: São Paulo urban, the São Paulo–Florianópolis corridor, Florianópolis trails, and connectivity variation along the corridor. It is an interview presentation layer, not an operational control plane or a real-time vehicle application.
 
 ## Streamlit Community Cloud
 
