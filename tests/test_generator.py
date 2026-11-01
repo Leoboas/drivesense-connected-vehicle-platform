@@ -1,4 +1,9 @@
-from drivesense.telemetry.generator import GeneratorConfig, generate_events
+from drivesense.telemetry.generator import (
+    SAO_PAULO_FLORIANOPOLIS_ROAD,
+    GeneratorConfig,
+    generate_events,
+    point_on_path,
+)
 
 
 def test_generator_injects_deterministic_duplicates() -> None:
@@ -25,3 +30,8 @@ def test_generator_covers_the_four_geography_scenarios() -> None:
         "SP_FLORIANOPOLIS_CONNECTIVITY_VARIATION",
     }
     assert {event.region_type for event in events} == {"URBAN", "HIGHWAY", "TRAIL"}
+
+
+def test_sao_paulo_florianopolis_corridor_uses_declared_road_endpoints() -> None:
+    assert point_on_path(SAO_PAULO_FLORIANOPOLIS_ROAD, 0) == SAO_PAULO_FLORIANOPOLIS_ROAD[0]
+    assert point_on_path(SAO_PAULO_FLORIANOPOLIS_ROAD, 1) == SAO_PAULO_FLORIANOPOLIS_ROAD[-1]

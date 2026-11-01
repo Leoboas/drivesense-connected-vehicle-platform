@@ -2,7 +2,20 @@ variable "name" { type = string }
 variable "data_bucket" { type = string }
 variable "silver_prefix" { type = string }
 variable "glue_role_arn" { type = string }
+variable "script_path" {
+  type        = string
+  description = "Local Glue ETL script published as a Terraform-managed S3 object."
+}
 variable "tags" { type = map(string) }
+
+resource "aws_s3_object" "telemetry_etl_script" {
+  bucket       = var.data_bucket
+  key          = "artifacts/telemetry_etl.py"
+  source       = var.script_path
+  etag         = filemd5(var.script_path)
+  content_type = "text/x-python"
+  tags         = var.tags
+}
 resource "aws_glue_catalog_database" "this" {
   name = replace("${var.name}_catalog", "-", "_")
 }
@@ -33,6 +46,8 @@ resource "aws_glue_job" "telemetry_etl" {
     "--spark-event-logs-path"              = "s3://${var.data_bucket}/spark-event-logs/"
   }
   tags = var.tags
+
+  depends_on = [aws_s3_object.telemetry_etl_script]
 }
 
 resource "aws_glue_catalog_table" "telemetry_silver" {
@@ -177,6 +192,40 @@ resource "aws_glue_catalog_table" "telemetry_silver" {
     columns {
       name = "sync_duration_ms"
       type = "int"
+    }
+    dynamic "columns" {
+      for_each = {
+        packet_loss_pct        = "double"
+        network_provider       = "string"
+        bytes_buffered         = "bigint"
+        road_class             = "string"
+        distance_remaining_km  = "double"
+        eta_minutes            = "double"
+        reroute_count          = "int"
+        map_match_confidence   = "double"
+        screen_id              = "string"
+        interaction_type       = "string"
+        warning_level          = "string"
+        driver_action          = "string"
+        driver_response_time_ms = "int"
+        battery_temperature_c  = "double"
+        energy_consumption_kwh = "double"
+        range_estimate_km      = "double"
+        tire_pressure_status   = "string"
+        vehicle_state          = "string"
+        ingested_at            = "string"
+        late_arrival_seconds   = "int"
+        retry_count            = "int"
+        processing_latency_ms  = "int"
+        weather_condition      = "string"
+        road_surface           = "string"
+        traffic_level          = "string"
+        visibility_level       = "string"
+      }
+      content {
+        name = columns.key
+        type = columns.value
+      }
     }
   }
   depends_on = [aws_glue_job.telemetry_etl]
