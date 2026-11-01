@@ -10,9 +10,51 @@ import os
 from pathlib import Path
 
 import duckdb
+import pandas as pd
 import streamlit as st
 
 DEFAULT_DATA = "data/samples/dashboard-demo.jsonl"
+REQUIRED_INPUT_COLUMNS = {
+    "event_id",
+    "vehicle_id",
+    "trip_id",
+    "timestamp",
+    "latitude",
+    "longitude",
+    "speed_kph",
+    "battery_soc",
+    "signal_dbm",
+    "latency_ms",
+    "connection_state",
+}
+LEGACY_DEFAULTS: dict[str, object] = {
+    "warning_generated_at": None,
+    "warning_displayed_at": None,
+    "object_detected": False,
+    "scenario": "LEGACY_SAO_PAULO",
+    "route_id": "legacy-sp-urban",
+    "route_segment": "SAO_PAULO_METRO",
+    "region_type": "URBAN",
+    "offline_duration_s": 0,
+    "reconnection_count": 0,
+    "sync_duration_ms": 0,
+    "packet_loss_pct": 0.0,
+    "bytes_buffered": 0,
+    "screen_id": "UNKNOWN",
+    "interaction_type": "NONE",
+    "warning_level": "NONE",
+    "energy_consumption_kwh": 0.0,
+    "range_estimate_km": 0.0,
+    "tire_pressure_status": "UNKNOWN",
+    "battery_temperature_c": 25.0,
+    "late_arrival_seconds": 0,
+    "retry_count": 0,
+    "processing_latency_ms": 0,
+    "road_class": "UNKNOWN",
+    "weather_condition": "UNKNOWN",
+    "road_surface": "UNKNOWN",
+    "traffic_level": "UNKNOWN",
+}
 
 
 def relation_for(path: str) -> str:
@@ -27,38 +69,27 @@ def relation_for(path: str) -> str:
 
 @st.cache_data(show_spinner=False)
 def load_rows(path: str):  # type: ignore[no-untyped-def]
+    """Load current or legacy Silver data into the dashboard's display contract."""
     connection = duckdb.connect()
     source = relation_for(path)
-    rows = connection.sql(
-        f"""
-        SELECT *,
-          try_cast(timestamp AS TIMESTAMP) AS event_timestamp,
-          CASE
-            WHEN warning_displayed_at IS NOT NULL AND warning_generated_at IS NOT NULL
-            THEN epoch_ms(try_cast(warning_displayed_at AS TIMESTAMP))
-                 - epoch_ms(try_cast(warning_generated_at AS TIMESTAMP))
-          END AS warning_latency_ms,
-          CASE
-            WHEN battery_soc < 0 OR battery_soc > 100 THEN 'INVALID_BATTERY_SOC'
-            WHEN speed_kph < 0 THEN 'INVALID_SPEED'
-            WHEN try_cast(timestamp AS TIMESTAMP) IS NULL THEN 'INVALID_TIMESTAMP'
-            ELSE 'VALID'
-          END AS data_quality_flag
-        FROM {source}
-        """
-    ).df()
-    defaults = {
-        "scenario": "LEGACY_SAO_PAULO",
-        "route_id": "legacy-sp-urban",
-        "route_segment": "SAO_PAULO_METRO",
-        "region_type": "URBAN",
-        "offline_duration_s": 0,
-        "reconnection_count": 0,
-        "sync_duration_ms": 0,
-    }
-    for column, default in defaults.items():
+    rows = connection.sql(f"SELECT * FROM {source}").df()
+    missing = REQUIRED_INPUT_COLUMNS.difference(rows.columns)
+    if missing:
+        missing_columns = ", ".join(sorted(missing))
+        raise ValueError(f"Input is missing required telemetry columns: {missing_columns}.")
+    for column, default in LEGACY_DEFAULTS.items():
         if column not in rows:
             rows[column] = default
+    rows["event_timestamp"] = pd.to_datetime(rows["timestamp"], errors="coerce", utc=True)
+    warning_generated = pd.to_datetime(rows["warning_generated_at"], errors="coerce", utc=True)
+    warning_displayed = pd.to_datetime(rows["warning_displayed_at"], errors="coerce", utc=True)
+    rows["warning_latency_ms"] = (warning_displayed - warning_generated).dt.total_seconds() * 1000
+    rows["data_quality_flag"] = "VALID"
+    rows.loc[(rows["battery_soc"] < 0) | (rows["battery_soc"] > 100), "data_quality_flag"] = (
+        "INVALID_BATTERY_SOC"
+    )
+    rows.loc[rows["speed_kph"] < 0, "data_quality_flag"] = "INVALID_SPEED"
+    rows.loc[rows["event_timestamp"].isna(), "data_quality_flag"] = "INVALID_TIMESTAMP"
     return rows
 
 
@@ -77,8 +108,9 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
     trip_count = data["trip_id"].nunique()
     invalid_count = int((data["data_quality_flag"] != "VALID").sum())
 
-    overview, connectivity, hmi, quality, route = st.tabs(
+    executive, overview, connectivity, hmi, quality, route = st.tabs(
         [
+            "Premium mobility",
             "Vehicle overview",
             "Connectivity",
             "HMI / proximity",
@@ -86,6 +118,57 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
             "Route intelligence",
         ]
     )
+
+    with executive:
+        detected_events = data[data["object_detected"]]
+        warning_delivery_rate = (
+            detected_events["warning_displayed_at"].notna().mean()
+            if not detected_events.empty
+            else 1.0
+        )
+        connected_rate = (data["connection_state"] == "CONNECTED").mean()
+        hands_free_rate = data["interaction_type"].isin(["VOICE", "STEERING_WHEEL"]).mean()
+        vehicle_health_rate = (
+            (data["tire_pressure_status"] != "LOW") & data["battery_temperature_c"].between(15, 45)
+        ).mean()
+        a, b, c, d = st.columns(4)
+        a.metric("Safety-warning delivery", f"{warning_delivery_rate:.1%}")
+        b.metric("Connected journey continuity", f"{connected_rate:.1%}")
+        c.metric("Low-distraction interaction", f"{hands_free_rate:.1%}")
+        d.metric("Vehicle health within range", f"{vehicle_health_rate:.1%}")
+        st.subheader("Connected premium mobility — executive lens")
+        st.caption(
+            "Independent portfolio view using synthetic telemetry. It is not a BMW product, "
+            "dataset, or performance claim."
+        )
+        st.dataframe(
+            [
+                {
+                    "Pillar": "Safety and confidence",
+                    "Evidence": "Warning delivery, response latency and vehicle-health signals",
+                    "Decision enabled": "Prioritise safety-critical experience defects",
+                },
+                {
+                    "Pillar": "Effortless digital experience",
+                    "Evidence": "Voice/steering-wheel interactions and HMI warning context",
+                    "Decision enabled": "Reduce driver distraction in digital journeys",
+                },
+                {
+                    "Pillar": "Journey continuity",
+                    "Evidence": "Coverage, packet loss, buffering and reconnection behaviour",
+                    "Decision enabled": "Protect navigation and services during weak connectivity",
+                },
+                {
+                    "Pillar": "Electric mobility readiness",
+                    "Evidence": "Energy per event, range estimate and battery temperature",
+                    "Decision enabled": (
+                        "Surface energy and range context without overstating precision"
+                    ),
+                },
+            ],
+            hide_index=True,
+            use_container_width=True,
+        )
 
     with overview:
         a, b, c, d = st.columns(4)
