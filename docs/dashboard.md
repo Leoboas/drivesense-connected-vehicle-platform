@@ -1,5 +1,9 @@
 # Dashboard
 
+The interface uses an original cockpit-inspired visual system: graphite surfaces, electric-blue
+accents, compact executive cards and a journey-first navigation hierarchy. It does not reproduce
+or imply any OEM visual identity.
+
 The portfolio UI is a local Streamlit application. It deliberately has no public endpoint and does not run AWS compute continuously.
 
 Install the optional UI dependencies and start it from the repository root:

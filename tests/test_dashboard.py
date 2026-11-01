@@ -1,6 +1,6 @@
 import json
 
-from app.dashboard import load_rows, relation_for
+from app.dashboard import experience_status, load_rows, relation_for
 
 
 def test_relation_for_accepts_only_local_supported_dashboard_formats() -> None:
@@ -48,3 +48,9 @@ def test_load_rows_adapts_a_legacy_silver_record(tmp_path) -> None:  # type: ign
     assert rows.loc[0, "tire_pressure_status"] == "UNKNOWN"
     assert rows.loc[0, "scenario"] == "LEGACY_SAO_PAULO"
     assert rows.loc[0, "data_quality_flag"] == "VALID"
+
+
+def test_experience_status_uses_clear_executive_thresholds() -> None:
+    assert experience_status(0.99) == "EXCEPTIONAL"
+    assert experience_status(0.90) == "STABLE"
+    assert experience_status(0.89) == "ATTENTION"

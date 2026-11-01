@@ -57,6 +57,57 @@ LEGACY_DEFAULTS: dict[str, object] = {
 }
 
 
+def experience_status(rate: float) -> str:
+    """Translate a product-health rate into concise executive language."""
+    if rate >= 0.98:
+        return "EXCEPTIONAL"
+    if rate >= 0.90:
+        return "STABLE"
+    return "ATTENTION"
+
+
+def apply_premium_theme() -> None:
+    """Apply a restrained, original cockpit-inspired presentation theme."""
+    st.markdown(
+        """
+        <style>
+        .stApp {
+          background: radial-gradient(circle at top right, #162843 0%, #0a101a 35%, #070b12 100%);
+        }
+        [data-testid="stSidebar"] { background: #0b1320; border-right: 1px solid #20334d; }
+        [data-testid="stHeader"] { background: rgba(7, 11, 18, 0.75); }
+        [data-testid="stMetric"] {
+          background: linear-gradient(145deg, rgba(24, 39, 61, 0.94), rgba(12, 20, 32, 0.94));
+          border: 1px solid #274363; border-radius: 14px; padding: 1rem;
+          box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+        }
+        [data-testid="stMetricLabel"] { color: #9eb6d0; }
+        [data-testid="stMetricValue"] { color: #f5f8fc; }
+        .drivesense-hero {
+          border: 1px solid #2f5f91; border-radius: 18px; padding: 1.5rem 1.75rem;
+          background: linear-gradient(110deg, rgba(11, 33, 58, 0.98), rgba(17, 30, 47, 0.84));
+          margin: 0.25rem 0 1.25rem 0;
+        }
+        .drivesense-eyebrow {
+          color: #58b7ff; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.14em;
+        }
+        .drivesense-hero h1 { color: #ffffff; margin: 0.3rem 0; font-weight: 650; }
+        .drivesense-hero p { color: #b8c8da; margin: 0; max-width: 58rem; }
+        .drivesense-status {
+          display: inline-block; border: 1px solid #2dba8c; border-radius: 999px; color: #8de3bf;
+          font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; padding: 0.28rem 0.6rem;
+          margin-bottom: 0.65rem;
+        }
+        button[data-baseweb="tab"] { color: #a9bad0; font-weight: 600; }
+        button[data-baseweb="tab"][aria-selected="true"] {
+          color: #ffffff; border-bottom-color: #58b7ff;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def relation_for(path: str) -> str:
     """Return a DuckDB relation expression only for supported local inputs."""
     normalized = path.replace("\\", "/").replace("'", "''")
@@ -94,8 +145,10 @@ def load_rows(path: str):  # type: ignore[no-untyped-def]
 
 
 def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
+    st.sidebar.markdown("## DriveSense studio")
+    st.sidebar.caption("Connected-vehicle analytical briefing")
     selected_scenarios = st.sidebar.multiselect(
-        "Geographic scenarios",
+        "Journey scenarios",
         options=sorted(data["scenario"].unique()),
         default=sorted(data["scenario"].unique()),
     )
@@ -107,6 +160,10 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
     vehicle_count = data["vehicle_id"].nunique()
     trip_count = data["trip_id"].nunique()
     invalid_count = int((data["data_quality_flag"] != "VALID").sum())
+    connected_rate = (data["connection_state"] == "CONNECTED").mean()
+    st.sidebar.markdown("---")
+    st.sidebar.metric("Journey continuity", f"{connected_rate:.1%}")
+    st.sidebar.metric("Data quality", f"{(1 - invalid_count / max(total_events, 1)):.1%}")
 
     executive, overview, connectivity, hmi, quality, route = st.tabs(
         [
@@ -126,7 +183,6 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
             if not detected_events.empty
             else 1.0
         )
-        connected_rate = (data["connection_state"] == "CONNECTED").mean()
         hands_free_rate = data["interaction_type"].isin(["VOICE", "STEERING_WHEEL"]).mean()
         vehicle_health_rate = (
             (data["tire_pressure_status"] != "LOW") & data["battery_temperature_c"].between(15, 45)
@@ -136,6 +192,13 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
         b.metric("Connected journey continuity", f"{connected_rate:.1%}")
         c.metric("Low-distraction interaction", f"{hands_free_rate:.1%}")
         d.metric("Vehicle health within range", f"{vehicle_health_rate:.1%}")
+        st.markdown(
+            (
+                '<span class="drivesense-status">JOURNEY STATUS · '
+                f"{experience_status(connected_rate)}</span>"
+            ),
+            unsafe_allow_html=True,
+        )
         st.subheader("Connected premium mobility — executive lens")
         st.caption(
             "Independent portfolio view using synthetic telemetry. It is not a BMW product, "
@@ -300,8 +363,24 @@ recommendation."""
 
 
 def main() -> None:
-    st.set_page_config(page_title="DriveSense | Connected Vehicle Platform", layout="wide")
-    st.title("DriveSense Connected Vehicle Platform")
+    st.set_page_config(
+        page_title="DriveSense | Connected Vehicle Platform",
+        page_icon="⚡",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
+    apply_premium_theme()
+    st.markdown(
+        """
+        <section class="drivesense-hero">
+          <div class="drivesense-eyebrow">CONNECTED VEHICLE ANALYTICS</div>
+          <h1>DriveSense Mobility Intelligence</h1>
+          <p>An executive product briefing for safety, digital experience, journey continuity and
+          electric-mobility context. Synthetic data only; no operational vehicle control.</p>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
     st.caption(
         "Portfolio dashboard — synthetic data only; it is not an operational vehicle control plane."
     )
