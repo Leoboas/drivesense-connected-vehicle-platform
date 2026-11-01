@@ -1,6 +1,12 @@
 variable "aws_region" {
-  type    = string
-  default = "us-east-1"
+  type        = string
+  description = "Project selected Region. DriveSense resources must remain in us-east-2."
+  default     = "us-east-2"
+
+  validation {
+    condition     = var.aws_region == "us-east-2"
+    error_message = "DriveSense project resources must be planned and applied in us-east-2."
+  }
 }
 variable "silver_prefix" {
   type        = string
