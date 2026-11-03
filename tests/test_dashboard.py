@@ -9,6 +9,9 @@ from app.dashboard import (
     latency_by_minute,
     load_rows,
     relation_for,
+    vehicle_label,
+    vehicle_model_for,
+    vehicle_system_map,
     vehicle_timeline,
 )
 
@@ -57,7 +60,29 @@ def test_load_rows_adapts_a_legacy_silver_record(tmp_path) -> None:  # type: ign
     assert rows.loc[0, "energy_consumption_kwh"] == 0.0
     assert rows.loc[0, "tire_pressure_status"] == "UNKNOWN"
     assert rows.loc[0, "scenario"] == "LEGACY_SAO_PAULO"
+    assert rows.loc[0, "vehicle_model"] == "BMW iX2 xDrive30 M Sport"
     assert rows.loc[0, "data_quality_flag"] == "VALID"
+
+
+def test_vehicle_label_maps_synthetic_fleet_identifiers_to_brazilian_model_names() -> None:
+    assert vehicle_model_for("vehicle-0000") == "BMW iX1 xDrive30 M Sport"
+    assert vehicle_label("vehicle-0000") == "BMW iX1 xDrive30 M Sport · vehicle-0000"
+
+
+def test_vehicle_system_map_marks_connected_vehicle_subsystems() -> None:
+    figure = vehicle_system_map(
+        pd.Series(
+            {
+                "connection_state": "DEGRADED",
+                "tire_pressure_status": "NORMAL",
+                "battery_temperature_c": 30.0,
+                "screen_id": "NAVIGATION",
+            }
+        )
+    )
+
+    assert len(figure.data) == 1
+    assert len(figure.layout.shapes) == 1
 
 
 def test_experience_status_uses_clear_executive_thresholds() -> None:

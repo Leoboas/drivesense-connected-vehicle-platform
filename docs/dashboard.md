@@ -53,6 +53,23 @@ twin or navigation system.
 Latency is aggregated by minute rather than by date. The demo dataset occurs on one synthetic
 date, so daily aggregation would correctly but unhelpfully produce only one point.
 
+### Fleet labels and technical maps
+
+The dashboard maps synthetic fleet identifiers such as `vehicle-0000` to a presentation-only
+catalogue of BMW models offered in Brazil. The identifier remains visible beside the model name;
+this association is synthetic and does not describe a real vehicle, customer, or BMW fleet.
+
+The Vehicle Systems Map is an original conceptual diagram of connected-vehicle subsystems. Its
+markers summarize telematics connectivity, battery-temperature context, tyre status, and the
+active HMI screen for the selected synthetic event. It is neither a physical vehicle schematic
+nor an OEM diagnostic result.
+
+The Technical 3D Connectivity Incident Map shows only `DEGRADED` and `OFFLINE` events for the
+selected synthetic journey. Its horizontal axes are the generated longitude and latitude and its
+vertical axis is service latency. Hover details retain six-decimal coordinate precision, route
+segment, road class, packet loss, and offline duration. The geography is a declared synthetic
+route envelope, not a record of real vehicle positions.
+
 ## Streamlit Community Cloud
 
 Use the GitHub repository `Leoboas/drivesense-connected-vehicle-platform`, branch `main`, and main file `app/dashboard.py`. The public application uses only the versioned synthetic sample; it does not receive AWS credentials or access the project S3 buckets. Publish only after the reviewed `develop` to `main` release PR has merged, so the public source and public dashboard stay aligned.
