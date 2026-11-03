@@ -257,10 +257,26 @@ def maintenance_history(current: pd.Series) -> pd.DataFrame:
     event_time = pd.Timestamp(current["event_timestamp"])
     return pd.DataFrame(
         [
-            {"Date": event_time - pd.Timedelta(days=180), "Review": "Delivery inspection", "Status": "COMPLETED"},
-            {"Date": event_time - pd.Timedelta(days=90), "Review": "Connected-services health check", "Status": "COMPLETED"},
-            {"Date": event_time, "Review": "Journey telemetry review", "Status": str(current["connection_state"])},
-            {"Date": event_time + pd.Timedelta(days=90), "Review": "Preventive service window", "Status": "PLANNED"},
+            {
+                "Date": event_time - pd.Timedelta(days=180),
+                "Review": "Delivery inspection",
+                "Status": "COMPLETED",
+            },
+            {
+                "Date": event_time - pd.Timedelta(days=90),
+                "Review": "Connected-services health check",
+                "Status": "COMPLETED",
+            },
+            {
+                "Date": event_time,
+                "Review": "Journey telemetry review",
+                "Status": str(current["connection_state"]),
+            },
+            {
+                "Date": event_time + pd.Timedelta(days=90),
+                "Review": "Preventive service window",
+                "Status": "PLANNED",
+            },
         ]
     )
 
@@ -538,7 +554,9 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
         )
         components.html(vehicle_system_view(current, str(current["vehicle_model"])), height=570)
         st.subheader("Review history")
-        st.caption("Synthetic service-review narrative for this portfolio scenario; not a vehicle record.")
+        st.caption(
+            "Synthetic service-review narrative for this portfolio scenario; not a vehicle record."
+        )
         st.dataframe(maintenance_history(current), hide_index=True, use_container_width=True)
         with st.expander("Technical 3D vehicle-state space"):
             st.caption(
@@ -588,7 +606,9 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
             if incidents.empty:
                 st.info("No DEGRADED or OFFLINE events were generated for this selected journey.")
             else:
-                st.plotly_chart(connectivity_incident_map(timeline), use_container_width=True, theme=None)
+                st.plotly_chart(
+                    connectivity_incident_map(timeline), use_container_width=True, theme=None
+                )
 
     with executive:
         detected_events = data[data["object_detected"]]
