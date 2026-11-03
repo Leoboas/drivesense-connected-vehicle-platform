@@ -13,6 +13,7 @@ from pathlib import Path
 import duckdb
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 DEFAULT_DATA = "data/samples/dashboard-demo.jsonl"
@@ -29,6 +30,18 @@ BRAND_TOKENS = {
     "text_muted": "#b8c8da",
     "success": "#8de3bf",
 }
+BMW_BRAZIL_MODELS = (
+    "BMW iX1 xDrive30 M Sport",
+    "BMW iX2 xDrive30 M Sport",
+    "BMW i4 eDrive40 M Sport",
+    "BMW i7 xDrive60 M Sport",
+    "BMW X1 sDrive20i M Sport",
+    "BMW X2 xDrive20i M Sport",
+    "BMW X3 30 xDrive M Sport",
+    "BMW X5 xDrive50e M Sport",
+    "BMW 220 M Sport",
+    "BMW M135 xDrive",
+)
 REQUIRED_INPUT_COLUMNS = {
     "event_id",
     "vehicle_id",
@@ -102,6 +115,102 @@ def dashboard_hero() -> str:
           electric-mobility context. Synthetic data only; no operational vehicle control.</p>
         </section>
         """
+
+
+def vehicle_model_for(vehicle_id: str) -> str:
+    """Map a synthetic vehicle identifier to a current Brazilian-market model label."""
+    try:
+        model_index = int(vehicle_id.rsplit("-", maxsplit=1)[-1]) % len(BMW_BRAZIL_MODELS)
+    except ValueError:
+        return "Synthetic BMW vehicle"
+    return BMW_BRAZIL_MODELS[model_index]
+
+
+def vehicle_label(vehicle_id: str) -> str:
+    """Keep the technical identifier visible beside the presentation model name."""
+    return f"{vehicle_model_for(vehicle_id)} · {vehicle_id}"
+
+
+def vehicle_system_map(current: pd.Series) -> go.Figure:
+    """Create a conceptual vehicle-system map, never a physical OEM diagnostic diagram."""
+    connection = str(current["connection_state"])
+    connection_color = {"CONNECTED": "#8de3bf", "DEGRADED": "#ffb547", "OFFLINE": "#f45b69"}.get(
+        connection, "#b8c8da"
+    )
+    tyre_status = str(current["tire_pressure_status"])
+    tyre_color = "#f45b69" if tyre_status == "LOW" else "#8de3bf"
+    battery_temperature = float(current["battery_temperature_c"])
+    battery_color = "#ffb547" if battery_temperature >= 38 else "#8de3bf"
+    systems = pd.DataFrame(
+        [
+            {
+                "x": 0,
+                "y": 3.6,
+                "system": "Telematics / antenna",
+                "status": connection,
+                "color": connection_color,
+            },
+            {
+                "x": 0,
+                "y": 0,
+                "system": "High-voltage battery",
+                "status": f"{battery_temperature:.1f} °C",
+                "color": battery_color,
+            },
+            {
+                "x": -1.35,
+                "y": -1.9,
+                "system": "Tyre sensors",
+                "status": tyre_status,
+                "color": tyre_color,
+            },
+            {
+                "x": 0,
+                "y": 1.25,
+                "system": "Multimedia / HMI",
+                "status": str(current["screen_id"]),
+                "color": "#58b7ff",
+            },
+        ]
+    )
+    figure = go.Figure()
+    figure.add_shape(
+        type="path",
+        path=(
+            "M 0,-3.5 C -1.25,-3.0 -1.55,-1.2 -1.45,0.5 L -1.25,2.7 "
+            "C -0.9,3.5 0,4.0 0,4.0 C 0,4.0 0.9,3.5 1.25,2.7 "
+            "L 1.45,0.5 C 1.55,-1.2 1.25,-3.0 0,-3.5 Z"
+        ),
+        fillcolor="#18273d",
+        line={"color": "#58b7ff", "width": 2},
+    )
+    figure.add_trace(
+        go.Scatter(
+            x=systems["x"],
+            y=systems["y"],
+            mode="markers+text",
+            marker={
+                "size": 18,
+                "color": systems["color"],
+                "line": {"color": "#f5f8fc", "width": 1},
+            },
+            text=systems["system"],
+            textposition="middle right",
+            customdata=systems[["status"]],
+            hovertemplate="<b>%{text}</b><br>Status: %{customdata[0]}<extra></extra>",
+        )
+    )
+    figure.update_layout(
+        height=430,
+        margin={"l": 10, "r": 10, "t": 10, "b": 10},
+        paper_bgcolor="#0b1320",
+        plot_bgcolor="#0b1320",
+        font={"color": "#f5f8fc"},
+        showlegend=False,
+        xaxis={"visible": False, "range": [-2.6, 3.2]},
+        yaxis={"visible": False, "range": [-4.1, 4.8], "scaleanchor": "x", "scaleratio": 1},
+    )
+    return figure
 
 
 def latency_by_minute(data: pd.DataFrame) -> pd.DataFrame:
@@ -203,6 +312,8 @@ def load_rows(path: str):  # type: ignore[no-untyped-def]
         if column not in rows:
             rows[column] = default
     rows["event_timestamp"] = pd.to_datetime(rows["timestamp"], errors="coerce", utc=True)
+    rows["vehicle_model"] = rows["vehicle_id"].map(vehicle_model_for)
+    rows["vehicle_label"] = rows["vehicle_id"].map(vehicle_label)
     warning_generated = pd.to_datetime(rows["warning_generated_at"], errors="coerce", utc=True)
     warning_displayed = pd.to_datetime(rows["warning_displayed_at"], errors="coerce", utc=True)
     rows["warning_latency_ms"] = (warning_displayed - warning_generated).dt.total_seconds() * 1000
@@ -249,12 +360,16 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
     )
 
     with twin:
-        st.subheader("Vehicle digital twin — synthetic journey replay")
+        st.subheader("Vehicle digital twin — synthetic scenario replay")
         st.caption(
             "Select a synthetic vehicle and move through its captured events. This is a product "
             "simulation, not a live vehicle control interface."
         )
-        selected_vehicle = st.selectbox("Vehicle", sorted(data["vehicle_id"].unique()))
+        selected_vehicle = st.selectbox(
+            "Vehicle",
+            sorted(data["vehicle_id"].unique()),
+            format_func=vehicle_label,
+        )
         timeline = vehicle_timeline(data, selected_vehicle)
         selected_event = st.slider(
             "Journey event",
@@ -264,11 +379,18 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
             format="%d",
         )
         current = timeline.iloc[selected_event]
+        st.markdown(f"#### {current['vehicle_model']}  ")
+        st.caption(f"Synthetic fleet identity · {selected_vehicle}")
+        st.info(
+            "Scenario estimates only: speed, battery, range and connectivity are generated "
+            "telemetry values. The route is a land-based corridor, not live road, traffic, "
+            "elevation or vehicle data."
+        )
         a, b, c, d = st.columns(4)
-        a.metric("Speed", f"{current['speed_kph']:.0f} km/h")
-        b.metric("Battery state", f"{current['battery_soc']:.0f}%")
-        c.metric("Estimated range", f"{current['range_estimate_km']:.0f} km")
-        d.metric("Connection", str(current["connection_state"]))
+        a.metric("Scenario speed", f"{current['speed_kph']:.0f} km/h")
+        b.metric("Simulated battery state", f"{current['battery_soc']:.0f}%")
+        c.metric("Modelled range", f"{current['range_estimate_km']:.0f} km")
+        d.metric("Synthetic connection", str(current["connection_state"]))
         left, right = st.columns([1.25, 1])
         with left:
             st.subheader("Journey condition replay")
@@ -303,6 +425,12 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
                 hide_index=True,
                 use_container_width=True,
             )
+        st.subheader("Vehicle systems map")
+        st.caption(
+            "Conceptual systems view for the selected synthetic event. It highlights telemetry "
+            "signals, not physical component locations or an OEM diagnostic result."
+        )
+        st.plotly_chart(vehicle_system_map(current), use_container_width=True, theme=None)
         with st.expander("Technical 3D vehicle-state space"):
             st.caption(
                 "Each point is an event. Position combines battery state, latency and energy; "
@@ -342,6 +470,49 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
                 scene={"bgcolor": "#0b1320"},
             )
             st.plotly_chart(figure, use_container_width=True, theme=None)
+        with st.expander("Technical 3D connectivity incident map"):
+            incidents = timeline[timeline["connection_state"].isin(["DEGRADED", "OFFLINE"])]
+            st.caption(
+                "Each point is a synthetic non-connected event. Longitude and latitude retain "
+                "six-decimal display precision; elevation represents observed service latency."
+            )
+            if incidents.empty:
+                st.info("No DEGRADED or OFFLINE events were generated for this selected journey.")
+            else:
+                incident_figure = px.scatter_3d(
+                    incidents,
+                    x="longitude",
+                    y="latitude",
+                    z="latency_ms",
+                    color="connection_state",
+                    size="packet_loss_pct",
+                    size_max=20,
+                    hover_data={
+                        "event_timestamp": True,
+                        "latitude": ":.6f",
+                        "longitude": ":.6f",
+                        "route_segment": True,
+                        "road_class": True,
+                        "offline_duration_s": True,
+                        "packet_loss_pct": ":.1f",
+                        "latency_ms": ":.1f",
+                    },
+                    labels={
+                        "longitude": "Longitude (°)",
+                        "latitude": "Latitude (°)",
+                        "latency_ms": "Observed latency (ms)",
+                        "packet_loss_pct": "Packet loss (%)",
+                    },
+                    color_discrete_map={"DEGRADED": "#ffb547", "OFFLINE": "#f45b69"},
+                )
+                incident_figure.update_layout(
+                    height=620,
+                    margin={"l": 0, "r": 0, "t": 30, "b": 0},
+                    paper_bgcolor="#0b1320",
+                    font={"color": "#f5f8fc"},
+                    scene={"bgcolor": "#0b1320"},
+                )
+                st.plotly_chart(incident_figure, use_container_width=True, theme=None)
 
     with executive:
         detected_events = data[data["object_detected"]]

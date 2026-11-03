@@ -50,8 +50,31 @@ The optional 3D plot is intended for technical exploration: its axes are battery
 and energy per event; colour is connection state and size is speed. It is not a real-time digital
 twin or navigation system.
 
+The Journey Event speed, battery state, range and connection cards are scenario estimates. The
+demo uses a land-based route envelope but does not consume live road speed limits, traffic,
+elevation, weather, OEM battery data, or a real vehicle position. Their labels deliberately say
+`Scenario`, `Simulated`, `Modelled`, and `Synthetic` to prevent them being interpreted as
+operational measurements.
+
 Latency is aggregated by minute rather than by date. The demo dataset occurs on one synthetic
 date, so daily aggregation would correctly but unhelpfully produce only one point.
+
+### Fleet labels and technical maps
+
+The dashboard maps synthetic fleet identifiers such as `vehicle-0000` to a presentation-only
+catalogue of BMW models offered in Brazil. The identifier remains visible beside the model name;
+this association is synthetic and does not describe a real vehicle, customer, or BMW fleet.
+
+The Vehicle Systems Map is an original conceptual diagram of connected-vehicle subsystems. Its
+markers summarize telematics connectivity, battery-temperature context, tyre status, and the
+active HMI screen for the selected synthetic event. It is neither a physical vehicle schematic
+nor an OEM diagnostic result.
+
+The Technical 3D Connectivity Incident Map shows only `DEGRADED` and `OFFLINE` events for the
+selected synthetic journey. Its horizontal axes are the generated longitude and latitude and its
+vertical axis is service latency. Hover details retain six-decimal coordinate precision, route
+segment, road class, packet loss, and offline duration. The geography is a declared synthetic
+route envelope, not a record of real vehicle positions.
 
 ## Streamlit Community Cloud
 
