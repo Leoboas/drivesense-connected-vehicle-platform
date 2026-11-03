@@ -92,6 +92,18 @@ def brand_css_variables() -> str:
     return f"<style>:root {{{tokens}}}</style>"
 
 
+def dashboard_hero() -> str:
+    """Render the branded dashboard header from the editable product tokens."""
+    return f"""
+        <section class="drivesense-hero">
+          <div class="drivesense-eyebrow">{escape(BRAND_TOKENS["eyebrow"])}</div>
+          <h1>{escape(BRAND_TOKENS["product_name"])}</h1>
+          <p>An executive product briefing for safety, digital experience, journey continuity and
+          electric-mobility context. Synthetic data only; no operational vehicle control.</p>
+        </section>
+        """
+
+
 def latency_by_minute(data: pd.DataFrame) -> pd.DataFrame:
     """Aggregate latency at a useful simulation-playback granularity."""
     return (
@@ -524,17 +536,7 @@ def main() -> None:
         initial_sidebar_state="expanded",
     )
     apply_premium_theme()
-    st.markdown(
-        """
-        <section class="drivesense-hero">
-          <div class="drivesense-eyebrow">{BRAND_TOKENS["eyebrow"]}</div>
-          <h1>{BRAND_TOKENS["product_name"]}</h1>
-          <p>An executive product briefing for safety, digital experience, journey continuity and
-          electric-mobility context. Synthetic data only; no operational vehicle control.</p>
-        </section>
-        """.format(**BRAND_TOKENS),
-        unsafe_allow_html=True,
-    )
+    st.markdown(dashboard_hero(), unsafe_allow_html=True)
     st.caption(
         "Portfolio dashboard — synthetic data only; it is not an operational vehicle control plane."
     )
