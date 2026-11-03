@@ -360,7 +360,7 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
     )
 
     with twin:
-        st.subheader("Vehicle digital twin — synthetic journey replay")
+        st.subheader("Vehicle digital twin — synthetic scenario replay")
         st.caption(
             "Select a synthetic vehicle and move through its captured events. This is a product "
             "simulation, not a live vehicle control interface."
@@ -381,11 +381,16 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
         current = timeline.iloc[selected_event]
         st.markdown(f"#### {current['vehicle_model']}  ")
         st.caption(f"Synthetic fleet identity · {selected_vehicle}")
+        st.info(
+            "Scenario estimates only: speed, battery, range and connectivity are generated "
+            "telemetry values. The route is a land-based corridor, not live road, traffic, "
+            "elevation or vehicle data."
+        )
         a, b, c, d = st.columns(4)
-        a.metric("Speed", f"{current['speed_kph']:.0f} km/h")
-        b.metric("Battery state", f"{current['battery_soc']:.0f}%")
-        c.metric("Estimated range", f"{current['range_estimate_km']:.0f} km")
-        d.metric("Connection", str(current["connection_state"]))
+        a.metric("Scenario speed", f"{current['speed_kph']:.0f} km/h")
+        b.metric("Simulated battery state", f"{current['battery_soc']:.0f}%")
+        c.metric("Modelled range", f"{current['range_estimate_km']:.0f} km")
+        d.metric("Synthetic connection", str(current["connection_state"]))
         left, right = st.columns([1.25, 1])
         with left:
             st.subheader("Journey condition replay")
