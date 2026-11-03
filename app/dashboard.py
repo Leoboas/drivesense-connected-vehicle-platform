@@ -11,6 +11,7 @@ from pathlib import Path
 
 import duckdb
 import pandas as pd
+import plotly.express as px
 import streamlit as st
 
 DEFAULT_DATA = "data/samples/dashboard-demo.jsonl"
@@ -53,6 +54,7 @@ LEGACY_DEFAULTS: dict[str, object] = {
     "sync_duration_ms": 0,
     "packet_loss_pct": 0.0,
     "bytes_buffered": 0,
+    "map_match_confidence": 1.0,
     "screen_id": "UNKNOWN",
     "interaction_type": "NONE",
     "warning_level": "NONE",
@@ -87,6 +89,27 @@ def brand_css_variables() -> str:
         if name not in {"product_name", "eyebrow"}
     )
     return f"<style>:root {{{tokens}}}</style>"
+
+
+def latency_by_minute(data: pd.DataFrame) -> pd.DataFrame:
+    """Aggregate latency at a useful simulation-playback granularity."""
+    return (
+        data.dropna(subset=["event_timestamp"])
+        .set_index("event_timestamp")
+        .sort_index()["latency_ms"]
+        .resample("min")
+        .mean()
+        .dropna()
+        .rename("average_latency_ms")
+        .reset_index()
+    )
+
+
+def vehicle_timeline(data: pd.DataFrame, vehicle_id: str) -> pd.DataFrame:
+    """Return one vehicle's ordered synthetic journey for the digital-twin replay."""
+    return (
+        data[data["vehicle_id"] == vehicle_id].sort_values("event_timestamp").reset_index(drop=True)
+    )
 
 
 def apply_premium_theme() -> None:
@@ -200,8 +223,9 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
     st.sidebar.metric("Journey continuity", f"{connected_rate:.1%}")
     st.sidebar.metric("Data quality", f"{(1 - invalid_count / max(total_events, 1)):.1%}")
 
-    executive, overview, connectivity, hmi, quality, route = st.tabs(
+    twin, executive, overview, connectivity, hmi, quality, route = st.tabs(
         [
+            "Digital twin",
             "Premium mobility",
             "Vehicle overview",
             "Connectivity",
@@ -210,6 +234,101 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
             "Route intelligence",
         ]
     )
+
+    with twin:
+        st.subheader("Vehicle digital twin — synthetic journey replay")
+        st.caption(
+            "Select a synthetic vehicle and move through its captured events. This is a product "
+            "simulation, not a live vehicle control interface."
+        )
+        selected_vehicle = st.selectbox("Vehicle", sorted(data["vehicle_id"].unique()))
+        timeline = vehicle_timeline(data, selected_vehicle)
+        selected_event = st.slider(
+            "Journey event",
+            min_value=0,
+            max_value=max(len(timeline) - 1, 0),
+            value=0,
+            format="%d",
+        )
+        current = timeline.iloc[selected_event]
+        a, b, c, d = st.columns(4)
+        a.metric("Speed", f"{current['speed_kph']:.0f} km/h")
+        b.metric("Battery state", f"{current['battery_soc']:.0f}%")
+        c.metric("Estimated range", f"{current['range_estimate_km']:.0f} km")
+        d.metric("Connection", str(current["connection_state"]))
+        left, right = st.columns([1.25, 1])
+        with left:
+            st.subheader("Journey condition replay")
+            replay_metrics = timeline.set_index("event_timestamp")[
+                ["battery_soc", "latency_ms", "signal_dbm"]
+            ]
+            st.line_chart(replay_metrics, y_label="Vehicle and service signals")
+        with right:
+            st.subheader("Multimedia and vehicle context")
+            st.markdown(
+                f"**Screen:** {current['screen_id']}  \n"
+                f"**Interaction:** {current['interaction_type']}  \n"
+                f"**Road:** {current['road_class']} · {current['road_surface']}  \n"
+                f"**Conditions:** {current['weather_condition']} · "
+                f"{current['traffic_level']} traffic"
+            )
+            st.dataframe(
+                pd.DataFrame(
+                    [
+                        {
+                            "Signal": "Battery temperature",
+                            "Value": f"{current['battery_temperature_c']:.1f} °C",
+                        },
+                        {"Signal": "Tyre pressure", "Value": current["tire_pressure_status"]},
+                        {"Signal": "Packet loss", "Value": f"{current['packet_loss_pct']:.1f}%"},
+                        {
+                            "Signal": "Map-match confidence",
+                            "Value": f"{current['map_match_confidence']:.0%}",
+                        },
+                    ]
+                ),
+                hide_index=True,
+                use_container_width=True,
+            )
+        with st.expander("Technical 3D vehicle-state space"):
+            st.caption(
+                "Each point is an event. Position combines battery state, latency and energy; "
+                "colour shows connection state and point size represents speed."
+            )
+            figure = px.scatter_3d(
+                timeline,
+                x="battery_soc",
+                y="latency_ms",
+                z="energy_consumption_kwh",
+                color="connection_state",
+                size="speed_kph",
+                size_max=18,
+                hover_data=[
+                    "event_timestamp",
+                    "screen_id",
+                    "interaction_type",
+                    "weather_condition",
+                    "road_class",
+                ],
+                labels={
+                    "battery_soc": "Battery state (%)",
+                    "latency_ms": "Latency (ms)",
+                    "energy_consumption_kwh": "Energy (kWh/event)",
+                },
+                color_discrete_map={
+                    "CONNECTED": "#58b7ff",
+                    "DEGRADED": "#ffb547",
+                    "OFFLINE": "#f45b69",
+                },
+            )
+            figure.update_layout(
+                height=560,
+                margin={"l": 0, "r": 0, "t": 20, "b": 0},
+                paper_bgcolor="#0b1320",
+                font={"color": "#f5f8fc"},
+                scene={"bgcolor": "#0b1320"},
+            )
+            st.plotly_chart(figure, use_container_width=True, theme=None)
 
     with executive:
         detected_events = data[data["object_detected"]]
@@ -303,12 +422,11 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
         f.metric("Average sync time", f"{data['sync_duration_ms'].mean():.0f} ms")
         g.metric("Reconnections", f"{data['reconnection_count'].sum():,}")
         st.subheader("Average latency over time")
-        daily = (
-            data.assign(event_date=data["event_timestamp"].dt.date)
-            .groupby("event_date")["latency_ms"]
-            .mean()
+        st.line_chart(
+            latency_by_minute(data).set_index("event_timestamp"),
+            y="average_latency_ms",
+            y_label="Average latency (ms)",
         )
-        st.line_chart(daily, y_label="Average latency (ms)")
         stability = data.groupby("route_segment")["latency_ms"].mean().sort_values(ascending=False)
         st.subheader("Average latency by road or trail segment")
         st.bar_chart(stability, y_label="Average latency (ms)")

@@ -42,6 +42,17 @@ The dashboard accepts both the current enriched contract and legacy Silver extra
 optional enrichment fields receive explicit display defaults, so a valid older dataset cannot
 crash the interface.
 
+## Digital twin and latency timeline
+
+The Digital Twin tab is a synthetic replay of a selected vehicle's journey. It presents battery,
+range, connectivity, road conditions and multimedia interaction in a product-friendly 2D view.
+The optional 3D plot is intended for technical exploration: its axes are battery state, latency
+and energy per event; colour is connection state and size is speed. It is not a real-time digital
+twin or navigation system.
+
+Latency is aggregated by minute rather than by date. The demo dataset occurs on one synthetic
+date, so daily aggregation would correctly but unhelpfully produce only one point.
+
 ## Streamlit Community Cloud
 
 Use the GitHub repository `Leoboas/drivesense-connected-vehicle-platform`, branch `main`, and main file `app/dashboard.py`. The public application uses only the versioned synthetic sample; it does not receive AWS credentials or access the project S3 buckets. Publish only after the reviewed `develop` to `main` release PR has merged, so the public source and public dashboard stay aligned.
