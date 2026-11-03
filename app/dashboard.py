@@ -11,9 +11,23 @@ from pathlib import Path
 
 import duckdb
 import pandas as pd
+import plotly.express as px
 import streamlit as st
 
 DEFAULT_DATA = "data/samples/dashboard-demo.jsonl"
+BRAND_TOKENS = {
+    "product_name": "DriveSense Mobility Intelligence",
+    "eyebrow": "CONNECTED VEHICLE ANALYTICS",
+    "accent": "#58b7ff",
+    "accent_deep": "#162843",
+    "background": "#070b12",
+    "surface": "#0b1320",
+    "surface_elevated": "#18273d",
+    "border": "#274363",
+    "text": "#f5f8fc",
+    "text_muted": "#b8c8da",
+    "success": "#8de3bf",
+}
 REQUIRED_INPUT_COLUMNS = {
     "event_id",
     "vehicle_id",
@@ -40,6 +54,7 @@ LEGACY_DEFAULTS: dict[str, object] = {
     "sync_duration_ms": 0,
     "packet_loss_pct": 0.0,
     "bytes_buffered": 0,
+    "map_match_confidence": 1.0,
     "screen_id": "UNKNOWN",
     "interaction_type": "NONE",
     "warning_level": "NONE",
@@ -55,6 +70,100 @@ LEGACY_DEFAULTS: dict[str, object] = {
     "road_surface": "UNKNOWN",
     "traffic_level": "UNKNOWN",
 }
+
+
+def experience_status(rate: float) -> str:
+    """Translate a product-health rate into concise executive language."""
+    if rate >= 0.98:
+        return "EXCEPTIONAL"
+    if rate >= 0.90:
+        return "STABLE"
+    return "ATTENTION"
+
+
+def brand_css_variables() -> str:
+    """Expose the editable visual tokens as CSS custom properties."""
+    tokens = "".join(
+        f"--drivesense-{name.replace('_', '-')}: {value};"
+        for name, value in BRAND_TOKENS.items()
+        if name not in {"product_name", "eyebrow"}
+    )
+    return f"<style>:root {{{tokens}}}</style>"
+
+
+def latency_by_minute(data: pd.DataFrame) -> pd.DataFrame:
+    """Aggregate latency at a useful simulation-playback granularity."""
+    return (
+        data.dropna(subset=["event_timestamp"])
+        .set_index("event_timestamp")
+        .sort_index()["latency_ms"]
+        .resample("min")
+        .mean()
+        .dropna()
+        .rename("average_latency_ms")
+        .reset_index()
+    )
+
+
+def vehicle_timeline(data: pd.DataFrame, vehicle_id: str) -> pd.DataFrame:
+    """Return one vehicle's ordered synthetic journey for the digital-twin replay."""
+    return (
+        data[data["vehicle_id"] == vehicle_id].sort_values("event_timestamp").reset_index(drop=True)
+    )
+
+
+def apply_premium_theme() -> None:
+    """Apply a restrained, original cockpit-inspired presentation theme."""
+    st.markdown(brand_css_variables(), unsafe_allow_html=True)
+    st.markdown(
+        """
+        <style>
+        .stApp {
+          background: radial-gradient(
+            circle at top right, var(--drivesense-accent-deep) 0%, #0a101a 35%,
+            var(--drivesense-background) 100%
+          );
+        }
+        [data-testid="stSidebar"] {
+          background: var(--drivesense-surface); border-right: 1px solid var(--drivesense-border);
+        }
+        [data-testid="stHeader"] { background: rgba(7, 11, 18, 0.75); }
+        [data-testid="stMetric"] {
+          background: linear-gradient(
+            145deg, var(--drivesense-surface-elevated), var(--drivesense-surface)
+          );
+          border: 1px solid var(--drivesense-border); border-radius: 14px; padding: 1rem;
+          box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+        }
+        [data-testid="stMetricLabel"] { color: var(--drivesense-text-muted); }
+        [data-testid="stMetricValue"] { color: var(--drivesense-text); }
+        .drivesense-hero {
+          border: 1px solid var(--drivesense-border); border-radius: 18px; padding: 1.5rem 1.75rem;
+          background: linear-gradient(
+            110deg, var(--drivesense-accent-deep), var(--drivesense-surface)
+          );
+          margin: 0.25rem 0 1.25rem 0;
+        }
+        .drivesense-eyebrow {
+          color: var(--drivesense-accent); font-size: 0.75rem; font-weight: 700;
+          letter-spacing: 0.14em;
+        }
+        .drivesense-hero h1 { color: var(--drivesense-text); margin: 0.3rem 0; font-weight: 650; }
+        .drivesense-hero p { color: var(--drivesense-text-muted); margin: 0; max-width: 58rem; }
+        .drivesense-status {
+          display: inline-block; border: 1px solid var(--drivesense-success); border-radius: 999px;
+          color: var(--drivesense-success);
+          font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; padding: 0.28rem 0.6rem;
+          margin-bottom: 0.65rem;
+        }
+        button[data-baseweb="tab"] { color: var(--drivesense-text-muted); font-weight: 600; }
+        button[data-baseweb="tab"][aria-selected="true"] {
+          color: var(--drivesense-text); border-bottom-color: var(--drivesense-accent);
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def relation_for(path: str) -> str:
@@ -94,8 +203,10 @@ def load_rows(path: str):  # type: ignore[no-untyped-def]
 
 
 def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
+    st.sidebar.markdown("## DriveSense studio")
+    st.sidebar.caption("Connected-vehicle analytical briefing")
     selected_scenarios = st.sidebar.multiselect(
-        "Geographic scenarios",
+        "Journey scenarios",
         options=sorted(data["scenario"].unique()),
         default=sorted(data["scenario"].unique()),
     )
@@ -107,9 +218,14 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
     vehicle_count = data["vehicle_id"].nunique()
     trip_count = data["trip_id"].nunique()
     invalid_count = int((data["data_quality_flag"] != "VALID").sum())
+    connected_rate = (data["connection_state"] == "CONNECTED").mean()
+    st.sidebar.markdown("---")
+    st.sidebar.metric("Journey continuity", f"{connected_rate:.1%}")
+    st.sidebar.metric("Data quality", f"{(1 - invalid_count / max(total_events, 1)):.1%}")
 
-    executive, overview, connectivity, hmi, quality, route = st.tabs(
+    twin, executive, overview, connectivity, hmi, quality, route = st.tabs(
         [
+            "Digital twin",
             "Premium mobility",
             "Vehicle overview",
             "Connectivity",
@@ -119,6 +235,101 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
         ]
     )
 
+    with twin:
+        st.subheader("Vehicle digital twin — synthetic journey replay")
+        st.caption(
+            "Select a synthetic vehicle and move through its captured events. This is a product "
+            "simulation, not a live vehicle control interface."
+        )
+        selected_vehicle = st.selectbox("Vehicle", sorted(data["vehicle_id"].unique()))
+        timeline = vehicle_timeline(data, selected_vehicle)
+        selected_event = st.slider(
+            "Journey event",
+            min_value=0,
+            max_value=max(len(timeline) - 1, 0),
+            value=0,
+            format="%d",
+        )
+        current = timeline.iloc[selected_event]
+        a, b, c, d = st.columns(4)
+        a.metric("Speed", f"{current['speed_kph']:.0f} km/h")
+        b.metric("Battery state", f"{current['battery_soc']:.0f}%")
+        c.metric("Estimated range", f"{current['range_estimate_km']:.0f} km")
+        d.metric("Connection", str(current["connection_state"]))
+        left, right = st.columns([1.25, 1])
+        with left:
+            st.subheader("Journey condition replay")
+            replay_metrics = timeline.set_index("event_timestamp")[
+                ["battery_soc", "latency_ms", "signal_dbm"]
+            ]
+            st.line_chart(replay_metrics, y_label="Vehicle and service signals")
+        with right:
+            st.subheader("Multimedia and vehicle context")
+            st.markdown(
+                f"**Screen:** {current['screen_id']}  \n"
+                f"**Interaction:** {current['interaction_type']}  \n"
+                f"**Road:** {current['road_class']} · {current['road_surface']}  \n"
+                f"**Conditions:** {current['weather_condition']} · "
+                f"{current['traffic_level']} traffic"
+            )
+            st.dataframe(
+                pd.DataFrame(
+                    [
+                        {
+                            "Signal": "Battery temperature",
+                            "Value": f"{current['battery_temperature_c']:.1f} °C",
+                        },
+                        {"Signal": "Tyre pressure", "Value": current["tire_pressure_status"]},
+                        {"Signal": "Packet loss", "Value": f"{current['packet_loss_pct']:.1f}%"},
+                        {
+                            "Signal": "Map-match confidence",
+                            "Value": f"{current['map_match_confidence']:.0%}",
+                        },
+                    ]
+                ),
+                hide_index=True,
+                use_container_width=True,
+            )
+        with st.expander("Technical 3D vehicle-state space"):
+            st.caption(
+                "Each point is an event. Position combines battery state, latency and energy; "
+                "colour shows connection state and point size represents speed."
+            )
+            figure = px.scatter_3d(
+                timeline,
+                x="battery_soc",
+                y="latency_ms",
+                z="energy_consumption_kwh",
+                color="connection_state",
+                size="speed_kph",
+                size_max=18,
+                hover_data=[
+                    "event_timestamp",
+                    "screen_id",
+                    "interaction_type",
+                    "weather_condition",
+                    "road_class",
+                ],
+                labels={
+                    "battery_soc": "Battery state (%)",
+                    "latency_ms": "Latency (ms)",
+                    "energy_consumption_kwh": "Energy (kWh/event)",
+                },
+                color_discrete_map={
+                    "CONNECTED": "#58b7ff",
+                    "DEGRADED": "#ffb547",
+                    "OFFLINE": "#f45b69",
+                },
+            )
+            figure.update_layout(
+                height=560,
+                margin={"l": 0, "r": 0, "t": 20, "b": 0},
+                paper_bgcolor="#0b1320",
+                font={"color": "#f5f8fc"},
+                scene={"bgcolor": "#0b1320"},
+            )
+            st.plotly_chart(figure, use_container_width=True, theme=None)
+
     with executive:
         detected_events = data[data["object_detected"]]
         warning_delivery_rate = (
@@ -126,7 +337,6 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
             if not detected_events.empty
             else 1.0
         )
-        connected_rate = (data["connection_state"] == "CONNECTED").mean()
         hands_free_rate = data["interaction_type"].isin(["VOICE", "STEERING_WHEEL"]).mean()
         vehicle_health_rate = (
             (data["tire_pressure_status"] != "LOW") & data["battery_temperature_c"].between(15, 45)
@@ -136,6 +346,13 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
         b.metric("Connected journey continuity", f"{connected_rate:.1%}")
         c.metric("Low-distraction interaction", f"{hands_free_rate:.1%}")
         d.metric("Vehicle health within range", f"{vehicle_health_rate:.1%}")
+        st.markdown(
+            (
+                '<span class="drivesense-status">JOURNEY STATUS · '
+                f"{experience_status(connected_rate)}</span>"
+            ),
+            unsafe_allow_html=True,
+        )
         st.subheader("Connected premium mobility — executive lens")
         st.caption(
             "Independent portfolio view using synthetic telemetry. It is not a BMW product, "
@@ -205,12 +422,11 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
         f.metric("Average sync time", f"{data['sync_duration_ms'].mean():.0f} ms")
         g.metric("Reconnections", f"{data['reconnection_count'].sum():,}")
         st.subheader("Average latency over time")
-        daily = (
-            data.assign(event_date=data["event_timestamp"].dt.date)
-            .groupby("event_date")["latency_ms"]
-            .mean()
+        st.line_chart(
+            latency_by_minute(data).set_index("event_timestamp"),
+            y="average_latency_ms",
+            y_label="Average latency (ms)",
         )
-        st.line_chart(daily, y_label="Average latency (ms)")
         stability = data.groupby("route_segment")["latency_ms"].mean().sort_values(ascending=False)
         st.subheader("Average latency by road or trail segment")
         st.bar_chart(stability, y_label="Average latency (ms)")
@@ -300,8 +516,24 @@ recommendation."""
 
 
 def main() -> None:
-    st.set_page_config(page_title="DriveSense | Connected Vehicle Platform", layout="wide")
-    st.title("DriveSense Connected Vehicle Platform")
+    st.set_page_config(
+        page_title="DriveSense | Connected Vehicle Platform",
+        page_icon="⚡",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
+    apply_premium_theme()
+    st.markdown(
+        """
+        <section class="drivesense-hero">
+          <div class="drivesense-eyebrow">{BRAND_TOKENS["eyebrow"]}</div>
+          <h1>{BRAND_TOKENS["product_name"]}</h1>
+          <p>An executive product briefing for safety, digital experience, journey continuity and
+          electric-mobility context. Synthetic data only; no operational vehicle control.</p>
+        </section>
+        """.format(**BRAND_TOKENS),
+        unsafe_allow_html=True,
+    )
     st.caption(
         "Portfolio dashboard — synthetic data only; it is not an operational vehicle control plane."
     )

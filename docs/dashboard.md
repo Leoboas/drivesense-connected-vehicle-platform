@@ -1,5 +1,17 @@
 # Dashboard
 
+The interface uses an original cockpit-inspired visual system: graphite surfaces, electric-blue
+accents, compact executive cards and a journey-first navigation hierarchy. It does not reproduce
+or imply any OEM visual identity.
+
+## Brand customization
+
+Adjust `BRAND_TOKENS` near the top of `app/dashboard.py` to change the product name, eyebrow
+label and visual tokens in one place. `accent`, `accent_deep`, `background`, `surface`, `border`,
+`text`, `text_muted`, and `success` are applied as CSS custom properties across the hero, sidebar,
+metric cards, tabs and journey-status badge. Use original colours and typography; do not use an
+OEM logo, proprietary asset, or wording that implies an official affiliation.
+
 The portfolio UI is a local Streamlit application. It deliberately has no public endpoint and does not run AWS compute continuously.
 
 Install the optional UI dependencies and start it from the repository root:
@@ -29,6 +41,17 @@ vehicle, driver, or performance result.
 The dashboard accepts both the current enriched contract and legacy Silver extracts. Missing
 optional enrichment fields receive explicit display defaults, so a valid older dataset cannot
 crash the interface.
+
+## Digital twin and latency timeline
+
+The Digital Twin tab is a synthetic replay of a selected vehicle's journey. It presents battery,
+range, connectivity, road conditions and multimedia interaction in a product-friendly 2D view.
+The optional 3D plot is intended for technical exploration: its axes are battery state, latency
+and energy per event; colour is connection state and size is speed. It is not a real-time digital
+twin or navigation system.
+
+Latency is aggregated by minute rather than by date. The demo dataset occurs on one synthetic
+date, so daily aggregation would correctly but unhelpfully produce only one point.
 
 ## Streamlit Community Cloud
 

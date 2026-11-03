@@ -1,6 +1,15 @@
 import json
 
-from app.dashboard import load_rows, relation_for
+import pandas as pd
+
+from app.dashboard import (
+    brand_css_variables,
+    experience_status,
+    latency_by_minute,
+    load_rows,
+    relation_for,
+    vehicle_timeline,
+)
 
 
 def test_relation_for_accepts_only_local_supported_dashboard_formats() -> None:
@@ -48,3 +57,45 @@ def test_load_rows_adapts_a_legacy_silver_record(tmp_path) -> None:  # type: ign
     assert rows.loc[0, "tire_pressure_status"] == "UNKNOWN"
     assert rows.loc[0, "scenario"] == "LEGACY_SAO_PAULO"
     assert rows.loc[0, "data_quality_flag"] == "VALID"
+
+
+def test_experience_status_uses_clear_executive_thresholds() -> None:
+    assert experience_status(0.99) == "EXCEPTIONAL"
+    assert experience_status(0.90) == "STABLE"
+    assert experience_status(0.89) == "ATTENTION"
+
+
+def test_brand_css_variables_exposes_editable_tokens() -> None:
+    stylesheet = brand_css_variables()
+    assert "--drivesense-accent: #58b7ff;" in stylesheet
+    assert "DriveSense Mobility Intelligence" not in stylesheet
+
+
+def test_latency_by_minute_keeps_multiple_observations_from_a_single_day() -> None:
+    data = pd.DataFrame(
+        {
+            "event_timestamp": pd.to_datetime(
+                ["2026-01-01T00:00:10Z", "2026-01-01T00:00:50Z", "2026-01-01T00:02:00Z"]
+            ),
+            "latency_ms": [100.0, 200.0, 300.0],
+        }
+    )
+
+    result = latency_by_minute(data)
+
+    assert result["average_latency_ms"].tolist() == [150.0, 300.0]
+
+
+def test_vehicle_timeline_orders_one_vehicle_events() -> None:
+    data = pd.DataFrame(
+        {
+            "vehicle_id": ["vehicle-1", "vehicle-2", "vehicle-1"],
+            "event_timestamp": pd.to_datetime(
+                ["2026-01-01T00:02:00Z", "2026-01-01T00:01:00Z", "2026-01-01T00:01:00Z"]
+            ),
+        }
+    )
+
+    result = vehicle_timeline(data, "vehicle-1")
+
+    assert result["event_timestamp"].tolist() == sorted(result["event_timestamp"].tolist())
