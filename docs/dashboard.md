@@ -1,5 +1,17 @@
 # Dashboard
 
+The interface uses an original cockpit-inspired visual system: graphite surfaces, electric-blue
+accents, compact executive cards and a journey-first navigation hierarchy. It does not reproduce
+or imply any OEM visual identity.
+
+## Brand customization
+
+Adjust `BRAND_TOKENS` near the top of `app/dashboard.py` to change the product name, eyebrow
+label and visual tokens in one place. `accent`, `accent_deep`, `background`, `surface`, `border`,
+`text`, `text_muted`, and `success` are applied as CSS custom properties across the hero, sidebar,
+metric cards, tabs and journey-status badge. Use original colours and typography; do not use an
+OEM logo, proprietary asset, or wording that implies an official affiliation.
+
 The portfolio UI is a local Streamlit application. It deliberately has no public endpoint and does not run AWS compute continuously.
 
 Install the optional UI dependencies and start it from the repository root:

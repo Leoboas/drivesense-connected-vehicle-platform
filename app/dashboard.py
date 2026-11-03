@@ -14,6 +14,19 @@ import pandas as pd
 import streamlit as st
 
 DEFAULT_DATA = "data/samples/dashboard-demo.jsonl"
+BRAND_TOKENS = {
+    "product_name": "DriveSense Mobility Intelligence",
+    "eyebrow": "CONNECTED VEHICLE ANALYTICS",
+    "accent": "#58b7ff",
+    "accent_deep": "#162843",
+    "background": "#070b12",
+    "surface": "#0b1320",
+    "surface_elevated": "#18273d",
+    "border": "#274363",
+    "text": "#f5f8fc",
+    "text_muted": "#b8c8da",
+    "success": "#8de3bf",
+}
 REQUIRED_INPUT_COLUMNS = {
     "event_id",
     "vehicle_id",
@@ -57,6 +70,79 @@ LEGACY_DEFAULTS: dict[str, object] = {
 }
 
 
+def experience_status(rate: float) -> str:
+    """Translate a product-health rate into concise executive language."""
+    if rate >= 0.98:
+        return "EXCEPTIONAL"
+    if rate >= 0.90:
+        return "STABLE"
+    return "ATTENTION"
+
+
+def brand_css_variables() -> str:
+    """Expose the editable visual tokens as CSS custom properties."""
+    tokens = "".join(
+        f"--drivesense-{name.replace('_', '-')}: {value};"
+        for name, value in BRAND_TOKENS.items()
+        if name not in {"product_name", "eyebrow"}
+    )
+    return f"<style>:root {{{tokens}}}</style>"
+
+
+def apply_premium_theme() -> None:
+    """Apply a restrained, original cockpit-inspired presentation theme."""
+    st.markdown(brand_css_variables(), unsafe_allow_html=True)
+    st.markdown(
+        """
+        <style>
+        .stApp {
+          background: radial-gradient(
+            circle at top right, var(--drivesense-accent-deep) 0%, #0a101a 35%,
+            var(--drivesense-background) 100%
+          );
+        }
+        [data-testid="stSidebar"] {
+          background: var(--drivesense-surface); border-right: 1px solid var(--drivesense-border);
+        }
+        [data-testid="stHeader"] { background: rgba(7, 11, 18, 0.75); }
+        [data-testid="stMetric"] {
+          background: linear-gradient(
+            145deg, var(--drivesense-surface-elevated), var(--drivesense-surface)
+          );
+          border: 1px solid var(--drivesense-border); border-radius: 14px; padding: 1rem;
+          box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+        }
+        [data-testid="stMetricLabel"] { color: var(--drivesense-text-muted); }
+        [data-testid="stMetricValue"] { color: var(--drivesense-text); }
+        .drivesense-hero {
+          border: 1px solid var(--drivesense-border); border-radius: 18px; padding: 1.5rem 1.75rem;
+          background: linear-gradient(
+            110deg, var(--drivesense-accent-deep), var(--drivesense-surface)
+          );
+          margin: 0.25rem 0 1.25rem 0;
+        }
+        .drivesense-eyebrow {
+          color: var(--drivesense-accent); font-size: 0.75rem; font-weight: 700;
+          letter-spacing: 0.14em;
+        }
+        .drivesense-hero h1 { color: var(--drivesense-text); margin: 0.3rem 0; font-weight: 650; }
+        .drivesense-hero p { color: var(--drivesense-text-muted); margin: 0; max-width: 58rem; }
+        .drivesense-status {
+          display: inline-block; border: 1px solid var(--drivesense-success); border-radius: 999px;
+          color: var(--drivesense-success);
+          font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; padding: 0.28rem 0.6rem;
+          margin-bottom: 0.65rem;
+        }
+        button[data-baseweb="tab"] { color: var(--drivesense-text-muted); font-weight: 600; }
+        button[data-baseweb="tab"][aria-selected="true"] {
+          color: var(--drivesense-text); border-bottom-color: var(--drivesense-accent);
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def relation_for(path: str) -> str:
     """Return a DuckDB relation expression only for supported local inputs."""
     normalized = path.replace("\\", "/").replace("'", "''")
@@ -94,8 +180,10 @@ def load_rows(path: str):  # type: ignore[no-untyped-def]
 
 
 def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
+    st.sidebar.markdown("## DriveSense studio")
+    st.sidebar.caption("Connected-vehicle analytical briefing")
     selected_scenarios = st.sidebar.multiselect(
-        "Geographic scenarios",
+        "Journey scenarios",
         options=sorted(data["scenario"].unique()),
         default=sorted(data["scenario"].unique()),
     )
@@ -107,6 +195,10 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
     vehicle_count = data["vehicle_id"].nunique()
     trip_count = data["trip_id"].nunique()
     invalid_count = int((data["data_quality_flag"] != "VALID").sum())
+    connected_rate = (data["connection_state"] == "CONNECTED").mean()
+    st.sidebar.markdown("---")
+    st.sidebar.metric("Journey continuity", f"{connected_rate:.1%}")
+    st.sidebar.metric("Data quality", f"{(1 - invalid_count / max(total_events, 1)):.1%}")
 
     executive, overview, connectivity, hmi, quality, route = st.tabs(
         [
@@ -126,7 +218,6 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
             if not detected_events.empty
             else 1.0
         )
-        connected_rate = (data["connection_state"] == "CONNECTED").mean()
         hands_free_rate = data["interaction_type"].isin(["VOICE", "STEERING_WHEEL"]).mean()
         vehicle_health_rate = (
             (data["tire_pressure_status"] != "LOW") & data["battery_temperature_c"].between(15, 45)
@@ -136,6 +227,13 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
         b.metric("Connected journey continuity", f"{connected_rate:.1%}")
         c.metric("Low-distraction interaction", f"{hands_free_rate:.1%}")
         d.metric("Vehicle health within range", f"{vehicle_health_rate:.1%}")
+        st.markdown(
+            (
+                '<span class="drivesense-status">JOURNEY STATUS · '
+                f"{experience_status(connected_rate)}</span>"
+            ),
+            unsafe_allow_html=True,
+        )
         st.subheader("Connected premium mobility — executive lens")
         st.caption(
             "Independent portfolio view using synthetic telemetry. It is not a BMW product, "
@@ -300,8 +398,24 @@ recommendation."""
 
 
 def main() -> None:
-    st.set_page_config(page_title="DriveSense | Connected Vehicle Platform", layout="wide")
-    st.title("DriveSense Connected Vehicle Platform")
+    st.set_page_config(
+        page_title="DriveSense | Connected Vehicle Platform",
+        page_icon="⚡",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
+    apply_premium_theme()
+    st.markdown(
+        """
+        <section class="drivesense-hero">
+          <div class="drivesense-eyebrow">{BRAND_TOKENS["eyebrow"]}</div>
+          <h1>{BRAND_TOKENS["product_name"]}</h1>
+          <p>An executive product briefing for safety, digital experience, journey continuity and
+          electric-mobility context. Synthetic data only; no operational vehicle control.</p>
+        </section>
+        """.format(**BRAND_TOKENS),
+        unsafe_allow_html=True,
+    )
     st.caption(
         "Portfolio dashboard — synthetic data only; it is not an operational vehicle control plane."
     )
