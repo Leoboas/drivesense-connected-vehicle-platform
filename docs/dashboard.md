@@ -65,16 +65,17 @@ The dashboard maps synthetic fleet identifiers such as `vehicle-0000` to a prese
 catalogue of BMW models offered in Brazil. The identifier remains visible beside the model name;
 this association is synthetic and does not describe a real vehicle, customer, or BMW fleet.
 
-The Vehicle Systems Map is an original conceptual diagram of connected-vehicle subsystems. Its
-markers summarize telematics connectivity, battery-temperature context, tyre status, and the
-active HMI screen for the selected synthetic event. It is neither a physical vehicle schematic
-nor an OEM diagnostic result.
+The Vehicle Systems Cockpit View is an original top-down vehicle illustration, designed to make
+the selected event readable at a glance. It highlights telematics connectivity, battery-temperature
+context, tyre status, and the active HMI screen. It is neither an OEM design nor a physical
+diagnostic diagram. The adjacent Review History is a synthetic narrative only; it is not a
+maintenance record or a vehicle-service claim.
 
-The Technical 3D Connectivity Incident Map shows only `DEGRADED` and `OFFLINE` events for the
-selected synthetic journey. Its horizontal axes are the generated longitude and latitude and its
-vertical axis is service latency. Hover details retain six-decimal coordinate precision, route
-segment, road class, packet loss, and offline duration. The geography is a declared synthetic
-route envelope, not a record of real vehicle positions.
+The Connectivity Incident Corridor Map replaces the spatial 3D scatter with a readable 2D
+coordinate view. Grey points give journey context; amber and red points show `DEGRADED` and
+`OFFLINE` events. Hover details retain six-decimal coordinate precision, route segment, road
+class, packet loss, and offline duration. The geography is a declared synthetic route envelope,
+not a record of real vehicle positions.
 
 ## Streamlit Community Cloud
 

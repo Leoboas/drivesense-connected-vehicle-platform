@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Local portfolio dashboard for DriveSense analytical data.
 
 Run with: streamlit run app/dashboard.py
@@ -15,6 +16,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+import streamlit.components.v1 as components
 
 DEFAULT_DATA = "data/samples/dashboard-demo.jsonl"
 BRAND_TOKENS = {
@@ -209,6 +211,126 @@ def vehicle_system_map(current: pd.Series) -> go.Figure:
         showlegend=False,
         xaxis={"visible": False, "range": [-2.6, 3.2]},
         yaxis={"visible": False, "range": [-4.1, 4.8], "scaleanchor": "x", "scaleratio": 1},
+    )
+    return figure
+
+
+def vehicle_system_view(current: pd.Series, vehicle_model: str) -> str:
+    """Render an original top-down connected-vehicle view with event-specific markers."""
+    connection = str(current["connection_state"])
+    tyre_status = str(current["tire_pressure_status"])
+    battery_temperature = float(current["battery_temperature_c"])
+    hmi = escape(str(current["screen_id"]))
+    connection_color = {"CONNECTED": "#8de3bf", "DEGRADED": "#ffb547", "OFFLINE": "#f45b69"}.get(
+        connection, "#58b7ff"
+    )
+    tyre_color = "#f45b69" if tyre_status == "LOW" else "#8de3bf"
+    battery_status = "ATTENTION" if battery_temperature >= 38 else "NORMAL"
+    battery_color = "#ffb547" if battery_status == "ATTENTION" else "#8de3bf"
+    return f"""
+    <div style="background:#0b1320;border:1px solid #274363;border-radius:16px;padding:12px;color:#f5f8fc;font-family:Arial,sans-serif;max-width:820px;margin:auto">
+      <div style="font-size:13px;color:#b8c8da;margin:0 0 8px 4px">{escape(vehicle_model)} · synthetic system view</div>
+      <svg viewBox="0 0 820 560" width="100%" height="500" role="img" aria-label="Connected vehicle systems map">
+        <rect x="0" y="0" width="820" height="560" rx="12" fill="#070b12"/>
+        <path d="M355 45 C315 70 298 138 300 220 L308 430 C311 488 340 520 410 530 C480 520 509 488 512 430 L520 220 C522 138 505 70 465 45 C435 26 385 26 355 45 Z" fill="#18273d" stroke="#58b7ff" stroke-width="4"/>
+        <path d="M344 166 L476 166 L492 262 L328 262 Z" fill="#274363" stroke="#58b7ff" stroke-width="2"/>
+        <path d="M327 300 L493 300 L478 438 L342 438 Z" fill="#122238" stroke="#3c6d9e" stroke-width="2"/>
+        <rect x="267" y="145" width="34" height="104" rx="13" fill="#05080d" stroke="#516b87" stroke-width="2"/><rect x="519" y="145" width="34" height="104" rx="13" fill="#05080d" stroke="#516b87" stroke-width="2"/>
+        <rect x="267" y="350" width="34" height="104" rx="13" fill="#05080d" stroke="#516b87" stroke-width="2"/><rect x="519" y="350" width="34" height="104" rx="13" fill="#05080d" stroke="#516b87" stroke-width="2"/>
+        <rect x="356" y="314" width="108" height="95" rx="10" fill="{battery_color}" opacity="0.30" stroke="{battery_color}" stroke-width="3"/>
+        <text x="410" y="354" text-anchor="middle" fill="#f5f8fc" font-size="15" font-weight="700">BATTERY</text><text x="410" y="378" text-anchor="middle" fill="#f5f8fc" font-size="13">{battery_temperature:.1f} C</text>
+        <rect x="365" y="198" width="90" height="35" rx="8" fill="#0b1320" stroke="#58b7ff" stroke-width="2"/><text x="410" y="221" text-anchor="middle" fill="#f5f8fc" font-size="12">HMI · {hmi}</text>
+        <circle cx="410" cy="95" r="15" fill="{connection_color}" stroke="#f5f8fc" stroke-width="2"/><path d="M410 80 L410 55 M395 65 Q410 48 425 65" fill="none" stroke="{connection_color}" stroke-width="3"/>
+        <circle cx="284" cy="196" r="10" fill="{tyre_color}"/><circle cx="536" cy="196" r="10" fill="{tyre_color}"/><circle cx="284" cy="402" r="10" fill="{tyre_color}"/><circle cx="536" cy="402" r="10" fill="{tyre_color}"/>
+        <line x1="425" y1="95" x2="650" y2="85" stroke="{connection_color}" stroke-width="2"/><text x="660" y="80" fill="#f5f8fc" font-size="16" font-weight="700">Telematics</text><text x="660" y="104" fill="{connection_color}" font-size="15">{escape(connection)}</text>
+        <line x1="464" y1="360" x2="650" y2="320" stroke="{battery_color}" stroke-width="2"/><text x="660" y="316" fill="#f5f8fc" font-size="16" font-weight="700">High-voltage battery</text><text x="660" y="340" fill="{battery_color}" font-size="15">{battery_status}</text>
+        <line x1="294" y1="402" x2="160" y2="430" stroke="{tyre_color}" stroke-width="2"/><text x="40" y="425" fill="#f5f8fc" font-size="16" font-weight="700">Tyre sensors</text><text x="40" y="449" fill="{tyre_color}" font-size="15">{escape(tyre_status)}</text>
+        <line x1="365" y1="215" x2="150" y2="190" stroke="#58b7ff" stroke-width="2"/><text x="40" y="185" fill="#f5f8fc" font-size="16" font-weight="700">Multimedia / HMI</text><text x="40" y="209" fill="#58b7ff" font-size="15">{hmi}</text>
+      </svg>
+      <div style="color:#b8c8da;font-size:12px;padding:0 4px 6px">Original conceptual visual. Statuses are synthetic telemetry context, not a physical OEM diagnostic diagram.</div>
+    </div>
+    """
+
+
+def maintenance_history(current: pd.Series) -> pd.DataFrame:
+    """Provide an explicitly synthetic service-review narrative for the selected scenario."""
+    event_time = pd.Timestamp(current["event_timestamp"])
+    return pd.DataFrame(
+        [
+            {
+                "Date": event_time - pd.Timedelta(days=180),
+                "Review": "Delivery inspection",
+                "Status": "COMPLETED",
+            },
+            {
+                "Date": event_time - pd.Timedelta(days=90),
+                "Review": "Connected-services health check",
+                "Status": "COMPLETED",
+            },
+            {
+                "Date": event_time,
+                "Review": "Journey telemetry review",
+                "Status": str(current["connection_state"]),
+            },
+            {
+                "Date": event_time + pd.Timedelta(days=90),
+                "Review": "Preventive service window",
+                "Status": "PLANNED",
+            },
+        ]
+    )
+
+
+def connectivity_incident_map(timeline: pd.DataFrame) -> go.Figure:
+    """Plot a readable 2D coordinate view for synthetic connectivity incidents."""
+    figure = go.Figure()
+    figure.add_trace(
+        go.Scatter(
+            x=timeline["longitude"],
+            y=timeline["latitude"],
+            mode="markers",
+            name="Journey context",
+            marker={"size": 6, "color": "#516b87", "opacity": 0.45},
+            hoverinfo="skip",
+        )
+    )
+    for state, color in (("DEGRADED", "#ffb547"), ("OFFLINE", "#f45b69")):
+        subset = timeline[timeline["connection_state"] == state]
+        figure.add_trace(
+            go.Scatter(
+                x=subset["longitude"],
+                y=subset["latitude"],
+                mode="markers",
+                name=state,
+                marker={"size": 14, "color": color, "line": {"color": "#f5f8fc", "width": 1}},
+                customdata=subset[
+                    [
+                        "event_timestamp",
+                        "route_segment",
+                        "road_class",
+                        "offline_duration_s",
+                        "packet_loss_pct",
+                        "latency_ms",
+                    ]
+                ],
+                hovertemplate=(
+                    "<b>%{fullData.name}</b><br>Longitude: %{x:.6f}°<br>Latitude: %{y:.6f}°"
+                    "<br>Event: %{customdata[0]}<br>Segment: %{customdata[1]}"
+                    "<br>Road: %{customdata[2]}<br>Offline: %{customdata[3]} s"
+                    "<br>Packet loss: %{customdata[4]:.1f}%<br>Latency: %{customdata[5]:.1f} ms"
+                    "<extra></extra>"
+                ),
+            )
+        )
+    figure.update_layout(
+        height=520,
+        margin={"l": 10, "r": 10, "t": 35, "b": 10},
+        paper_bgcolor="#0b1320",
+        plot_bgcolor="#0b1320",
+        font={"color": "#f5f8fc"},
+        legend={"orientation": "h", "y": 1.08},
+        xaxis={"title": "Longitude (°)", "gridcolor": "#274363", "zeroline": False},
+        yaxis={"title": "Latitude (°)", "gridcolor": "#274363", "zeroline": False},
     )
     return figure
 
@@ -425,12 +547,17 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
                 hide_index=True,
                 use_container_width=True,
             )
-        st.subheader("Vehicle systems map")
+        st.subheader("Vehicle systems cockpit view")
         st.caption(
-            "Conceptual systems view for the selected synthetic event. It highlights telemetry "
-            "signals, not physical component locations or an OEM diagnostic result."
+            "An original top-down vehicle visual for the selected synthetic event. It surfaces "
+            "telematics, battery, tyre and HMI context; it is not an OEM diagnostic diagram."
         )
-        st.plotly_chart(vehicle_system_map(current), use_container_width=True, theme=None)
+        components.html(vehicle_system_view(current, str(current["vehicle_model"])), height=570)
+        st.subheader("Review history")
+        st.caption(
+            "Synthetic service-review narrative for this portfolio scenario; not a vehicle record."
+        )
+        st.dataframe(maintenance_history(current), hide_index=True, use_container_width=True)
         with st.expander("Technical 3D vehicle-state space"):
             st.caption(
                 "Each point is an event. Position combines battery state, latency and energy; "
@@ -470,49 +597,18 @@ def show_dashboard(data) -> None:  # type: ignore[no-untyped-def]
                 scene={"bgcolor": "#0b1320"},
             )
             st.plotly_chart(figure, use_container_width=True, theme=None)
-        with st.expander("Technical 3D connectivity incident map"):
+        with st.expander("Connectivity incident corridor map"):
             incidents = timeline[timeline["connection_state"].isin(["DEGRADED", "OFFLINE"])]
             st.caption(
-                "Each point is a synthetic non-connected event. Longitude and latitude retain "
-                "six-decimal display precision; elevation represents observed service latency."
+                "A 2D geographic-coordinate view: grey points are journey context, while amber "
+                "and red points locate synthetic DEGRADED and OFFLINE events precisely."
             )
             if incidents.empty:
                 st.info("No DEGRADED or OFFLINE events were generated for this selected journey.")
             else:
-                incident_figure = px.scatter_3d(
-                    incidents,
-                    x="longitude",
-                    y="latitude",
-                    z="latency_ms",
-                    color="connection_state",
-                    size="packet_loss_pct",
-                    size_max=20,
-                    hover_data={
-                        "event_timestamp": True,
-                        "latitude": ":.6f",
-                        "longitude": ":.6f",
-                        "route_segment": True,
-                        "road_class": True,
-                        "offline_duration_s": True,
-                        "packet_loss_pct": ":.1f",
-                        "latency_ms": ":.1f",
-                    },
-                    labels={
-                        "longitude": "Longitude (°)",
-                        "latitude": "Latitude (°)",
-                        "latency_ms": "Observed latency (ms)",
-                        "packet_loss_pct": "Packet loss (%)",
-                    },
-                    color_discrete_map={"DEGRADED": "#ffb547", "OFFLINE": "#f45b69"},
+                st.plotly_chart(
+                    connectivity_incident_map(timeline), use_container_width=True, theme=None
                 )
-                incident_figure.update_layout(
-                    height=620,
-                    margin={"l": 0, "r": 0, "t": 30, "b": 0},
-                    paper_bgcolor="#0b1320",
-                    font={"color": "#f5f8fc"},
-                    scene={"bgcolor": "#0b1320"},
-                )
-                st.plotly_chart(incident_figure, use_container_width=True, theme=None)
 
     with executive:
         detected_events = data[data["object_detected"]]
