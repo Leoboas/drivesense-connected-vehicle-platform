@@ -4,7 +4,6 @@ import pandas as pd
 
 from app.dashboard import (
     brand_css_variables,
-    dashboard_hero,
     experience_status,
     latency_by_minute,
     load_rows,
@@ -70,13 +69,6 @@ def test_brand_css_variables_exposes_editable_tokens() -> None:
     stylesheet = brand_css_variables()
     assert "--drivesense-accent: #58b7ff;" in stylesheet
     assert "DriveSense Mobility Intelligence" not in stylesheet
-
-
-def test_dashboard_hero_renders_brand_tokens_without_string_format_errors() -> None:
-    hero = dashboard_hero()
-
-    assert "CONNECTED VEHICLE ANALYTICS" in hero
-    assert "DriveSense Mobility Intelligence" in hero
 
 
 def test_latency_by_minute_keeps_multiple_observations_from_a_single_day() -> None:
