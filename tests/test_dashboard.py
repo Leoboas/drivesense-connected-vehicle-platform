@@ -12,6 +12,7 @@ from app.dashboard import (
     vehicle_label,
     vehicle_model_for,
     vehicle_system_map,
+    vehicle_system_view,
     vehicle_timeline,
 )
 
@@ -83,6 +84,24 @@ def test_vehicle_system_map_marks_connected_vehicle_subsystems() -> None:
 
     assert len(figure.data) == 1
     assert len(figure.layout.shapes) == 1
+
+
+def test_vehicle_system_view_renders_a_top_down_vehicle_with_event_status() -> None:
+    view = vehicle_system_view(
+        pd.Series(
+            {
+                "connection_state": "OFFLINE",
+                "tire_pressure_status": "LOW",
+                "battery_temperature_c": 40.0,
+                "screen_id": "NAVIGATION",
+            }
+        ),
+        "BMW iX1 xDrive30 M Sport",
+    )
+
+    assert "Connected vehicle systems map" in view
+    assert "OFFLINE" in view
+    assert "BMW iX1 xDrive30 M Sport" in view
 
 
 def test_experience_status_uses_clear_executive_thresholds() -> None:
