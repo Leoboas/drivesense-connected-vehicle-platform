@@ -1,6 +1,6 @@
 import json
 
-from app.dashboard import experience_status, load_rows, relation_for
+from app.dashboard import brand_css_variables, experience_status, load_rows, relation_for
 
 
 def test_relation_for_accepts_only_local_supported_dashboard_formats() -> None:
@@ -54,3 +54,9 @@ def test_experience_status_uses_clear_executive_thresholds() -> None:
     assert experience_status(0.99) == "EXCEPTIONAL"
     assert experience_status(0.90) == "STABLE"
     assert experience_status(0.89) == "ATTENTION"
+
+
+def test_brand_css_variables_exposes_editable_tokens() -> None:
+    stylesheet = brand_css_variables()
+    assert "--drivesense-accent: #58b7ff;" in stylesheet
+    assert "DriveSense Mobility Intelligence" not in stylesheet
