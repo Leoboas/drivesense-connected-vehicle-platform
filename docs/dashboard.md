@@ -50,6 +50,12 @@ The optional 3D plot is intended for technical exploration: its axes are battery
 and energy per event; colour is connection state and size is speed. It is not a real-time digital
 twin or navigation system.
 
+The Journey Event speed, battery state, range and connection cards are scenario estimates. The
+demo uses a land-based route envelope but does not consume live road speed limits, traffic,
+elevation, weather, OEM battery data, or a real vehicle position. Their labels deliberately say
+`Scenario`, `Simulated`, `Modelled`, and `Synthetic` to prevent them being interpreted as
+operational measurements.
+
 Latency is aggregated by minute rather than by date. The demo dataset occurs on one synthetic
 date, so daily aggregation would correctly but unhelpfully produce only one point.
 
